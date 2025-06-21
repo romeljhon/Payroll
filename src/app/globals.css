@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+}
+
+@layer base {
+  :root {
+    --background: 220 13% 95%; /* Light gray #F0F2F5 */
+    --foreground: 222 44% 21%; /* Darker text for contrast */
+
+    --muted: 220 10% 90%;
+    --muted-foreground: 220 7% 45%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 44% 21%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 44% 21%;
+
+    --border: 220 10% 85%;
+    --input: 220 10% 88%;
+
+    --primary: 222 44% 41%; /* Navy blue #3B5998 */
+    --primary-foreground: 0 0% 98%; /* White */
+
+    --secondary: 220 10% 90%; /* A slightly darker gray for secondary elements */
+    --secondary-foreground: 222 44% 31%;
+
+    --accent: 203 82% 61%; /* Sky blue #55ACEE */
+    --accent-foreground: 0 0% 100%; /* White */
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --ring: 203 82% 61%; /* Accent color for rings */
+
+    --radius: 0.5rem;
+
+    /* Custom Sidebar Variables for a Light Theme */
+    --sidebar-background: 0 0% 100%; /* White sidebar background */
+    --sidebar-foreground: 222 44% 41%; /* Navy text on sidebar */
+    --sidebar-border: 220 10% 88%; /* Light gray border for sidebar */
+    
+    --sidebar-active-background: 203 82% 61%; /* Sky blue for active item background */
+    --sidebar-active-foreground: 0 0% 100%; /* White text for active item */
+    
+    --sidebar-hover-background: 220 13% 92%; /* Very light gray for hover background */
+    --sidebar-hover-foreground: 222 44% 41%; /* Navy text for hover item */
+
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+
+  .dark {
+    --background: 222 44% 15%; /* Dark navy */
+    --foreground: 0 0% 95%; /* Light gray text */
+
+    --muted: 222 40% 25%;
+    --muted-foreground: 220 10% 65%;
+
+    --popover: 222 44% 10%;
+    --popover-foreground: 0 0% 95%;
+
+    --card: 222 44% 10%;
+    --card-foreground: 0 0% 95%;
+
+    --border: 222 40% 30%;
+    --input: 222 40% 30%;
+
+    --primary: 203 82% 61%; /* Sky blue for primary in dark mode */
+    --primary-foreground: 222 44% 15%; /* Dark navy text on sky blue */
+
+    --secondary: 222 40% 25%;
+    --secondary-foreground: 0 0% 95%;
+
+    --accent: 222 44% 41%; /* Navy blue for accent in dark mode */
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --ring: 203 82% 51%;
+
+    /* Custom Sidebar Variables for Dark Theme */
+    --sidebar-background: 222 44% 10%; /* Very dark navy */
+    --sidebar-foreground: 0 0% 90%; /* Light gray text */
+    --sidebar-border: 222 40% 20%;
+    
+    --sidebar-active-background: 203 82% 61%; /* Sky blue */
+    --sidebar-active-foreground: 222 44% 10%; /* Dark text */
+    
+    --sidebar-hover-background: 222 40% 20%;
+    --sidebar-hover-foreground: 0 0% 90%;
+
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
