@@ -1,0 +1,40 @@
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__
+*.so
+*.egg
+*.egg-info
+dist
+build
+*.tar.gz
+
+# Django
+*.log
+*.pot
+*.pyc
+__pycache__
+local_settings.py
+db.sqlite3
+media
+
+# Development
+.idea
+.vscode
+*.swp
+*.swo
+*.swn
+*.bak
+*.orig
+*.old
+*.sage.py
+
+# Virtual Environments
+.venv
+/venv
+
+# Environment Variables
+.env
+.env*
+.env_docker
