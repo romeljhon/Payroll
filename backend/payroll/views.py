@@ -9,22 +9,24 @@ from employees.models import Employee, TimeLog
 from .serializers import PositionSerializer, SalaryComponentSerializer, SalaryStructureSerializer, GeneratePayrollSerializer, PayrollSummarySerializer, PayslipComponentSerializer
 from datetime import date
 from django.db.models import Sum, Q
+from drf_spectacular.utils import extend_schema
 
+@extend_schema(tags=["Payroll"])
 class PositionViewSet(viewsets.ModelViewSet):
     queryset = Position.objects.all()
     serializer_class = PositionSerializer
 
-
+@extend_schema(tags=["Payroll"])
 class SalaryComponentViewSet(viewsets.ModelViewSet):
     queryset = SalaryComponent.objects.all()
     serializer_class = SalaryComponentSerializer
 
-
+@extend_schema(tags=["Payroll"])
 class SalaryStructureViewSet(viewsets.ModelViewSet):
     queryset = SalaryStructure.objects.all()
     serializer_class = SalaryStructureSerializer
 
-
+@extend_schema(tags=["Payroll"])
 class GeneratePayrollView(APIView):
     def post(self, request):
         serializer = GeneratePayrollSerializer(data=request.data)
@@ -103,7 +105,8 @@ class GeneratePayrollView(APIView):
             "month": month.strftime('%B %Y'),
             "records": generated
         }, status=status.HTTP_200_OK)
-    
+
+@extend_schema(tags=["Payroll"])    
 class PayrollSummaryView(APIView):
     def get(self, request):
         employee_id = request.query_params.get('employee_id')
@@ -129,6 +132,7 @@ class PayrollSummaryView(APIView):
             "details": serializer.data
         })
 
+@extend_schema(tags=["Payroll"])
 class Generate13thMonthView(APIView):
     def post(self, request):
         employee_id = request.data.get("employee_id")
@@ -171,7 +175,7 @@ class Generate13thMonthView(APIView):
             "status": "created" if created else "updated"
         })
     
-
+@extend_schema(tags=["Payroll"])
 class PayslipPreviewView(APIView):
     def get(self, request):
         employee_id = request.query_params.get("employee_id")
@@ -204,6 +208,7 @@ class PayslipPreviewView(APIView):
             "net_pay": float(round(earnings - deductions, 2))
         })
 
+@extend_schema(tags=["Payroll"])
 class BatchPayrollGenerationView(APIView):
     def post(self, request):
         month = request.data.get("month")

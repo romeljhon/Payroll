@@ -1,11 +1,14 @@
 from rest_framework import viewsets
 from .models import Business, Branch
 from .serializers import BusinessSerializer, BranchSerializer
+from drf_spectacular.utils import extend_schema
 
+@extend_schema(tags=["Organization"])
 class BusinessViewSet(viewsets.ModelViewSet):
     queryset = Business.objects.all()
     serializer_class = BusinessSerializer
 
+@extend_schema(tags=["Organization"])
 class BranchViewSet(viewsets.ModelViewSet):
     queryset = Branch.objects.all()
     serializer_class = BranchSerializer

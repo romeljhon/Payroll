@@ -3,7 +3,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Employee, TimeLog
 from .serializers import EmployeeSerializer, TimeLogSerializer
+from drf_spectacular.utils import extend_schema
 
+@extend_schema(tags=["Employees"])
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
@@ -15,6 +17,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(branch_id=branch_id)
         return queryset
 
+@extend_schema(tags=["Employees"])
 class TimeLogViewSet(viewsets.ModelViewSet):
     queryset = TimeLog.objects.all()
     serializer_class = TimeLogSerializer
@@ -31,6 +34,7 @@ class TimeLogViewSet(viewsets.ModelViewSet):
 
         return qs.order_by('-date')
 
+@extend_schema(tags=["Employees"])
 class BulkTimeLogUploadView(APIView):
     def post(self, request):
         logs = request.data.get("logs", [])

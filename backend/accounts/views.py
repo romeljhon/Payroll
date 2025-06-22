@@ -3,8 +3,9 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
+from drf_spectacular.utils import extend_schema
 
-
+@extend_schema(tags=["Accounts"])
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -19,7 +20,7 @@ class LoginView(APIView):
         token, _ = Token.objects.get_or_create(user=user)
         return Response({'token': token.key}, status=status.HTTP_200_OK)
 
-
+@extend_schema(tags=["Accounts"])
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -27,7 +28,7 @@ class LogoutView(APIView):
         request.user.auth_token.delete()
         return Response({'success': 'Logged out successfully'}, status=status.HTTP_200_OK)
 
-
+@extend_schema(tags=["Accounts"])
 class PasswordChangeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
