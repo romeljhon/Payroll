@@ -1,7 +1,9 @@
 from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import Employee, TimeLog
+
+from timekeeping.models import TimeLog
+from .models import Employee
 from .serializers import EmployeeSerializer, TimeLogSerializer
 from drf_spectacular.utils import extend_schema
 

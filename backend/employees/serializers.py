@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from .models import Employee, TimeLog
+
+from timekeeping.models import TimeLog
+from .models import Employee
 from organization.models import Branch
 
 class EmployeeSerializer(serializers.ModelSerializer):

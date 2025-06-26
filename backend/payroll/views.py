@@ -4,12 +4,15 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from decimal import Decimal
-from .models import Position, SalaryComponent, SalaryStructure, PayrollRecord
-from employees.models import Employee, TimeLog
+
+from timekeeping.models import TimeLog
+from .models import PayrollCycle, Position, SalaryComponent, SalaryStructure, PayrollRecord
+from employees.models import Employee
 from .serializers import PositionSerializer, SalaryComponentSerializer, SalaryStructureSerializer, GeneratePayrollSerializer, PayrollSummarySerializer, PayslipComponentSerializer
 from datetime import date
 from django.db.models import Sum, Q
 from drf_spectacular.utils import extend_schema
+from payroll.services.payroll_cycles import get_dynamic_cutoff
 
 @extend_schema(tags=["Payroll"])
 class PositionViewSet(viewsets.ModelViewSet):
@@ -35,25 +38,43 @@ class GeneratePayrollView(APIView):
         employee_id = serializer.validated_data['employee_id']
         month = serializer.validated_data['month']
         base_salary = serializer.validated_data['base_salary']
+        cycle_type = serializer.validated_data['payroll_cycle']
 
         employee = get_object_or_404(Employee, id=employee_id)
         position = employee.position
-        structures = SalaryStructure.objects.filter(position=position)
 
+        # 🔥 Get cutoff dates dynamically
+        try:
+            cutoff_start, cutoff_end = get_dynamic_cutoff(
+                month, cycle_type, employee.branch.business
+            )
+        except PayrollCycle.DoesNotExist:
+            return Response({
+                "error": f"No payroll cycle of type {cycle_type} configured for this business."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Fetch salary structure
+        structures = SalaryStructure.objects.filter(position=position)
         generated = []
 
         for struct in structures:
             component = struct.component
+            # Compute amount
             if struct.is_percentage:
                 amount = (Decimal(struct.amount) / 100) * base_salary
             else:
                 amount = struct.amount
 
+            # Create/update PayrollRecord
             record, created = PayrollRecord.objects.update_or_create(
                 employee=employee,
                 month=month,
                 component=component,
-                defaults={'amount': amount, 'is_13th_month': False}
+                defaults={
+                    'amount': amount,
+                    'is_13th_month': False,
+                    'payroll_cycle': cycle_type  # 🔁 save cycle type
+                }
             )
 
             generated.append({
@@ -63,46 +84,14 @@ class GeneratePayrollView(APIView):
                 "status": "created" if created else "updated"
             })
 
-        # 🕒 Handle Overtime
-        try:
-            ot_component = SalaryComponent.objects.get(code="OT")
-        except SalaryComponent.DoesNotExist:
-            ot_component = None
-
-        if ot_component:
-            logs = TimeLog.objects.filter(
-                employee=employee,
-                date__month=month.month,
-                date__year=month.year
-            )
-
-            total_ot_hours = 0
-            for log in logs:
-                hours = log.duration_hours()
-                if hours > 8:
-                    total_ot_hours += hours - 8  # Overtime = hours beyond 8
-
-            hourly_rate = base_salary / Decimal(160)
-            ot_pay = hourly_rate * Decimal(total_ot_hours) * Decimal(1.25)  # 25% OT premium
-
-            if total_ot_hours > 0:
-                record, created = PayrollRecord.objects.update_or_create(
-                    employee=employee,
-                    month=month,
-                    component=ot_component,
-                    defaults={'amount': round(ot_pay, 2), 'is_13th_month': False}
-                )
-                generated.append({
-                    "component": ot_component.name,
-                    "amount": str(round(ot_pay, 2)),
-                    "type": "EARNING",
-                    "status": "created" if created else "updated",
-                    "hours": float(total_ot_hours)
-                })
-
         return Response({
             "employee": f"{employee.first_name} {employee.last_name}",
             "month": month.strftime('%B %Y'),
+            "cutoff": {
+                "start": cutoff_start,
+                "end": cutoff_end,
+                "cycle_type": cycle_type
+            },
             "records": generated
         }, status=status.HTTP_200_OK)
 
@@ -212,76 +201,170 @@ class PayslipPreviewView(APIView):
 class BatchPayrollGenerationView(APIView):
     def post(self, request):
         month = request.data.get("month")
-        base_salaries = request.data.get("base_salaries")
+        base_salaries = request.data.get("base_salaries")  # { employee_id: base_salary }
+        payroll_cycle = request.data.get("payroll_cycle", "MONTHLY")
 
         if not month or not base_salaries:
             return Response({"error": "month and base_salaries are required."}, status=400)
 
-        try:
-            ot_component = SalaryComponent.objects.get(code="OT")
-        except SalaryComponent.DoesNotExist:
-            ot_component = None
-
         results = []
+
+        # Constants
+        working_days = Decimal(22)
+        ot_multiplier = Decimal('1.25')
+        holiday_multipliers = {
+            'REGULAR': Decimal('2.0'),
+            'SPECIAL': Decimal('1.3')
+        }
 
         for employee_id, base_salary in base_salaries.items():
             employee = get_object_or_404(Employee, id=employee_id)
             position = employee.position
-            structures = SalaryStructure.objects.filter(position=position)
 
-            # 🧾 Process salary structure
+            try:
+                cutoff_start, cutoff_end = get_dynamic_cutoff(month, payroll_cycle, employee.branch.business)
+            except Exception:
+                results.append({
+                    "employee_id": employee.id,
+                    "error": f"No payroll cycle '{payroll_cycle}' found for business"
+                })
+                continue
+
+            daily_rate = Decimal(base_salary) / working_days
+            hourly_rate = daily_rate / 8
+            minute_rate = hourly_rate / 60
+
+            # 🧱 Fixed Salary Structure
+            structures = SalaryStructure.objects.filter(position=position)
             for struct in structures:
                 component = struct.component
-                if struct.is_percentage:
-                    amount = (Decimal(struct.amount) / 100) * Decimal(base_salary)
-                else:
-                    amount = struct.amount
+                amount = (Decimal(struct.amount) / 100) * Decimal(base_salary) if struct.is_percentage else struct.amount
 
                 PayrollRecord.objects.update_or_create(
                     employee=employee,
                     month=month,
                     component=component,
-                    defaults={'amount': amount, 'is_13th_month': False}
+                    defaults={
+                        'amount': round(amount, 2),
+                        'is_13th_month': False,
+                        'payroll_cycle': payroll_cycle
+                    }
                 )
 
-            ot_hours = 0
-            ot_amount = 0
+            # ⏱ Time-based Additions/Deductions
+            timelogs = TimeLog.objects.filter(employee=employee, date__range=(cutoff_start, cutoff_end))
 
-            # 🕒 Process overtime
-            if ot_component:
-                logs = TimeLog.objects.filter(
+            total_ot = timelogs.aggregate(Sum('ot_hours'))['ot_hours__sum'] or 0
+            total_late = timelogs.aggregate(Sum('late_minutes'))['late_minutes__sum'] or 0
+            total_undertime = timelogs.aggregate(Sum('undertime_minutes'))['undertime_minutes__sum'] or 0
+            total_absents = timelogs.filter(is_absent=True).count()
+
+            # OT
+            try:
+                ot_component = SalaryComponent.objects.get(code="OT")
+                ot_amount = Decimal(total_ot) * hourly_rate * ot_multiplier
+                PayrollRecord.objects.update_or_create(
                     employee=employee,
-                    date__month=date.fromisoformat(month).month,
-                    date__year=date.fromisoformat(month).year
+                    month=month,
+                    component=ot_component,
+                    defaults={
+                        'amount': round(ot_amount, 2),
+                        'is_13th_month': False,
+                        'payroll_cycle': payroll_cycle
+                    }
                 )
+            except SalaryComponent.DoesNotExist:
+                pass
 
-                for log in logs:
-                    hours = log.duration_hours()
-                    if hours > 8:
-                        ot_hours += hours - 8
+            # Late
+            try:
+                late_component = SalaryComponent.objects.get(code="LATE")
+                late_amount = Decimal(total_late) * minute_rate
+                PayrollRecord.objects.update_or_create(
+                    employee=employee,
+                    month=month,
+                    component=late_component,
+                    defaults={
+                        'amount': round(late_amount, 2),
+                        'is_13th_month': False,
+                        'payroll_cycle': payroll_cycle
+                    }
+                )
+            except SalaryComponent.DoesNotExist:
+                pass
 
-                if ot_hours > 0:
-                    hourly_rate = Decimal(base_salary) / Decimal(160)
-                    ot_amount = hourly_rate * Decimal(ot_hours) * Decimal(1.25)
+            # Undertime
+            try:
+                undertime_component = SalaryComponent.objects.get(code="UNDERTIME")
+                undertime_amount = Decimal(total_undertime) * minute_rate
+                PayrollRecord.objects.update_or_create(
+                    employee=employee,
+                    month=month,
+                    component=undertime_component,
+                    defaults={
+                        'amount': round(undertime_amount, 2),
+                        'is_13th_month': False,
+                        'payroll_cycle': payroll_cycle
+                    }
+                )
+            except SalaryComponent.DoesNotExist:
+                pass
+
+            # Absences
+            try:
+                absent_component = SalaryComponent.objects.get(code="ABSENT")
+                absent_amount = Decimal(total_absents) * daily_rate
+                PayrollRecord.objects.update_or_create(
+                    employee=employee,
+                    month=month,
+                    component=absent_component,
+                    defaults={
+                        'amount': round(absent_amount, 2),
+                        'is_13th_month': False,
+                        'payroll_cycle': payroll_cycle
+                    }
+                )
+            except SalaryComponent.DoesNotExist:
+                pass
+
+            # Holidays
+            holiday_totals = {}
+            for log in timelogs:
+                if log.holiday and log.ot_hours:
+                    h_type = log.holiday.type  # 'REGULAR' or 'SPECIAL'
+                    multiplier = holiday_multipliers.get(h_type)
+                    if multiplier:
+                        amount = hourly_rate * Decimal(log.ot_hours) * multiplier
+                        holiday_totals[h_type] = holiday_totals.get(h_type, 0) + amount
+
+            for h_type, amount in holiday_totals.items():
+                try:
+                    component = SalaryComponent.objects.get(code=f"HOLIDAY_{h_type}")
                     PayrollRecord.objects.update_or_create(
                         employee=employee,
                         month=month,
-                        component=ot_component,
-                        defaults={'amount': round(ot_amount, 2), 'is_13th_month': False}
+                        component=component,
+                        defaults={
+                            'amount': round(amount, 2),
+                            'is_13th_month': False,
+                            'payroll_cycle': payroll_cycle
+                        }
                     )
+                except SalaryComponent.DoesNotExist:
+                    continue
 
             results.append({
                 "employee_id": employee.id,
                 "employee_name": f"{employee.first_name} {employee.last_name}",
-                "status": "processed",
-                "base_salary": base_salary,
-                "components_generated": structures.count() + (1 if ot_amount > 0 else 0),
-                "overtime_hours": float(ot_hours),
-                "overtime_pay": str(round(ot_amount, 2)) if ot_hours > 0 else "0.00"
+                "cutoff_start": str(cutoff_start),
+                "cutoff_end": str(cutoff_end),
+                "base_salary": str(base_salary),
+                "status": "success"
             })
 
         return Response({
             "month": month,
-            "total_processed": len(results),
+            "payroll_cycle": payroll_cycle,
+            "processed": len(results),
             "results": results
         }, status=status.HTTP_200_OK)

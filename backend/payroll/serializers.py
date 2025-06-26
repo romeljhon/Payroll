@@ -25,6 +25,14 @@ class GeneratePayrollSerializer(serializers.Serializer):
     employee_id = serializers.IntegerField()
     month = serializers.DateField()
     base_salary = serializers.DecimalField(max_digits=10, decimal_places=2)
+    payroll_cycle = serializers.ChoiceField(
+        choices=[
+            ('MONTHLY', 'Monthly'),
+            ('SEMI_1', 'Semi-Monthly (1st Half)'),
+            ('SEMI_2', 'Semi-Monthly (2nd Half)'),
+        ],
+        default='SEMI_1'
+    )
 
 class PayrollSummarySerializer(serializers.ModelSerializer):
     component_name = serializers.CharField(source='component.name', read_only=True)

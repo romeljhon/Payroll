@@ -19,21 +19,29 @@ class Employee(models.Model):
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
-class TimeLog(models.Model):
-    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='time_logs')
-    date = models.DateField()
-    time_in = models.TimeField()
-    time_out = models.TimeField()
+    
+class WorkSchedulePolicy(models.Model):
+    branch = models.OneToOneField(Branch, on_delete=models.CASCADE, related_name='work_schedule')
 
-    is_overtime = models.BooleanField(default=False)  # Optional flag
+    time_in = models.TimeField(default="09:00")
+    time_out = models.TimeField(default="17:00")
+    break_hours = models.DecimalField(max_digits=4, decimal_places=2, default=1.0)
 
-    class Meta:
-        unique_together = ('employee', 'date')
+    min_hours_required = models.DecimalField(
+        max_digits=4, decimal_places=2, default=4.0,
+        help_text="Minimum working hours to be considered present"
+    )
+
+    is_flexible = models.BooleanField(default=False)
+
+    regular_work_days = models.CharField(
+        max_length=20,
+        default="0,1,2,3,4",
+        help_text="Comma-separated weekdays: 0=Mon, 6=Sun"
+    )
+
+    def get_work_days(self):
+        return list(map(int, self.regular_work_days.split(",")))
 
     def __str__(self):
-        return f"{self.employee} - {self.date}"
-
-    def duration_hours(self):
-        in_datetime = datetime.combine(self.date, self.time_in)
-        out_datetime = datetime.combine(self.date, self.time_out)
-        return round((out_datetime - in_datetime).total_seconds() / 3600, 2)
+        return f"Schedule for {self.branch.name}"
