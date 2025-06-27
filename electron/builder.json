@@ -1,0 +1,16 @@
+{
+  "appId": "com.mycompany.payroll",
+  "productName": "Payroll Desktop",
+  "files": [
+    "**/*",
+    "../frontend/out/**/*",
+    "../backend/**/*"
+  ],
+  "extraFiles": [],
+  "win": {
+    "target": "nsis"
+  },
+  "directories": {
+    "output": "../dist"
+  }
+}
