@@ -25,6 +25,7 @@ class WorkSchedulePolicy(models.Model):
 
     time_in = models.TimeField(default="09:00")
     time_out = models.TimeField(default="17:00")
+    grace_minutes = models.PositiveSmallIntegerField(default=0)
     break_hours = models.DecimalField(max_digits=4, decimal_places=2, default=1.0)
 
     min_hours_required = models.DecimalField(

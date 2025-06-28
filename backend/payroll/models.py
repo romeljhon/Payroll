@@ -88,3 +88,23 @@ class PayrollCycle(models.Model):
 
     def __str__(self):
         return f"{self.business.name} - {self.name} ({self.start_day}-{self.end_day})"
+    
+class PayrollPolicy(models.Model):
+    business = models.OneToOneField(Business, on_delete=models.CASCADE, related_name="payroll_policy")
+
+    grace_minutes = models.PositiveSmallIntegerField(default=0)
+    standard_working_days = models.DecimalField(default=22, max_digits=5, decimal_places=2)
+
+    # Penalty Rates
+    late_penalty_per_minute = models.DecimalField(default=2.0, max_digits=6, decimal_places=2)
+    undertime_penalty_per_minute = models.DecimalField(default=2.0, max_digits=6, decimal_places=2)
+    absent_penalty_per_day = models.DecimalField(default=1000.0, max_digits=10, decimal_places=2)
+
+    # Multipliers
+    ot_multiplier = models.DecimalField(default=1.25, max_digits=4, decimal_places=2)
+    rest_day_multiplier = models.DecimalField(default=1.3, max_digits=4, decimal_places=2)
+    holiday_regular_multiplier = models.DecimalField(default=2.0, max_digits=4, decimal_places=2)
+    holiday_special_multiplier = models.DecimalField(default=1.3, max_digits=4, decimal_places=2)
+
+    def __str__(self):
+        return f"PayrollPolicy for {self.business.name}"

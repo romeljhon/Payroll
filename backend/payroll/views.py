@@ -6,9 +6,9 @@ from django.shortcuts import get_object_or_404
 from decimal import Decimal
 
 from timekeeping.models import TimeLog
-from .models import PayrollCycle, Position, SalaryComponent, SalaryStructure, PayrollRecord
+from .models import PayrollCycle, PayrollPolicy, Position, SalaryComponent, SalaryStructure, PayrollRecord
 from employees.models import Employee
-from .serializers import PositionSerializer, SalaryComponentSerializer, SalaryStructureSerializer, GeneratePayrollSerializer, PayrollSummarySerializer, PayslipComponentSerializer
+from .serializers import PayrollPolicySerializer, PositionSerializer, SalaryComponentSerializer, SalaryStructureSerializer, GeneratePayrollSerializer, PayrollSummarySerializer, PayslipComponentSerializer
 from datetime import date
 from django.db.models import Sum, Q
 from drf_spectacular.utils import extend_schema
@@ -368,3 +368,15 @@ class BatchPayrollGenerationView(APIView):
             "processed": len(results),
             "results": results
         }, status=status.HTTP_200_OK)
+
+@extend_schema(tags=["Payroll"])
+class PayrollPolicyViewSet(viewsets.ModelViewSet):
+    queryset = PayrollPolicy.objects.select_related('business').all()
+    serializer_class = PayrollPolicySerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        business_id = self.request.query_params.get('business')
+        if business_id:
+            queryset = queryset.filter(business_id=business_id)
+        return queryset

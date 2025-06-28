@@ -5,10 +5,9 @@ from payroll.models import SalaryComponent
 from django.utils.timezone import make_aware
 
 def analyze_timelog(timelog, schedule):
-    """
-    Given a TimeLog and corresponding WorkSchedulePolicy,
-    return a list of salary components (LATE, OT, UNDERTIME, ABSENCE).
-    """
+    policy = timelog.employee.branch.business.payroll_policy
+    grace = schedule.grace_minutes if schedule.grace_minutes else policy.grace_minutes
+
     components = []
 
     expected_in = schedule.time_in
@@ -19,31 +18,31 @@ def analyze_timelog(timelog, schedule):
     weekday = timelog.date.weekday()
     is_rest_day = weekday not in work_days
 
-    # Calculate actual duration
     dt_in = datetime.combine(timelog.date, timelog.time_in)
     dt_out = datetime.combine(timelog.date, timelog.time_out)
     hours_worked = (dt_out - dt_in).total_seconds() / 3600 - float(schedule.break_hours)
 
     # LATE
     if timelog.time_in > expected_in:
-        late_minutes = (datetime.combine(timelog.date, timelog.time_in) - datetime.combine(timelog.date, expected_in)).seconds / 60
-        components.append({
-            "code": "LATE",
-            "minutes": round(late_minutes, 2)
-        })
+        late_diff = (dt_in - datetime.combine(timelog.date, expected_in)).seconds / 60
+        if late_diff > grace:
+            components.append({
+                "code": "LATE",
+                "minutes": round(late_diff, 2)
+            })
 
     # UNDERTIME
     if timelog.time_out < expected_out:
-        undertime_minutes = (datetime.combine(timelog.date, expected_out) - datetime.combine(timelog.date, timelog.time_out)).seconds / 60
+        undertime = (datetime.combine(timelog.date, expected_out) - dt_out).seconds / 60
         components.append({
             "code": "UNDERTIME",
-            "minutes": round(undertime_minutes, 2)
+            "minutes": round(undertime, 2)
         })
 
     # ABSENT
     if hours_worked < float(min_hours):
         components.append({
-            "code": "ABSENCE",
+            "code": "ABSENT",
             "hours": round(float(min_hours) - hours_worked, 2)
         })
 
@@ -62,6 +61,7 @@ def analyze_timelog(timelog, schedule):
         })
 
     return components
+
 
 
 def compute_time_based_components(employee, target_month):

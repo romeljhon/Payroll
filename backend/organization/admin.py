@@ -1,6 +1,12 @@
 from django.contrib import admin
 from .models import Business, Branch
 
-# Register your models here.
-admin.site.register(Business)
-admin.site.register(Branch)
+@admin.register(Business)
+class BusinessAdmin(admin.ModelAdmin):
+    search_fields = ['name']  # ✅ Required for autocomplete to work
+
+@admin.register(Branch)
+class BranchAdmin(admin.ModelAdmin):
+    list_display = ['name', 'business']
+    search_fields = ['name']
+    autocomplete_fields = ['business']

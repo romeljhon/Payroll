@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import (
+    PayrollPolicy,
     Position,
     SalaryComponent,
     SalaryStructure,
@@ -34,3 +35,20 @@ class PayrollCycleAdmin(admin.ModelAdmin):
     list_display = ('business', 'name', 'cycle_type', 'start_day', 'end_day', 'is_active')
     list_filter = ('business', 'cycle_type', 'is_active')
     search_fields = ('name',)
+
+@admin.register(PayrollPolicy)
+class PayrollPolicyAdmin(admin.ModelAdmin):
+    list_display = (
+        'business',
+        'grace_minutes',
+        'standard_working_days',
+        'late_penalty_per_minute',
+        'undertime_penalty_per_minute',
+        'absent_penalty_per_day',
+        'ot_multiplier',
+        'rest_day_multiplier',
+        'holiday_regular_multiplier',
+        'holiday_special_multiplier',
+    )
+    search_fields = ('business__name',)
+    autocomplete_fields = ['business']

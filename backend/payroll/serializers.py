@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Position, SalaryComponent, SalaryStructure, PayrollRecord
+from .models import PayrollPolicy, Position, SalaryComponent, SalaryStructure, PayrollRecord
 
 class PositionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -50,3 +50,23 @@ class PayslipComponentSerializer(serializers.ModelSerializer):
         model = PayrollRecord
         fields = ['name', 'type', 'amount', 'is_13th_month']
 
+
+class PayrollPolicySerializer(serializers.ModelSerializer):
+    business_name = serializers.CharField(source='business.name', read_only=True)
+
+    class Meta:
+        model = PayrollPolicy
+        fields = [
+            'id',
+            'business',          # business ID for write operations
+            'business_name',     # business name for read operations
+            'grace_minutes',
+            'standard_working_days',
+            'late_penalty_per_minute',
+            'undertime_penalty_per_minute',
+            'absent_penalty_per_day',
+            'ot_multiplier',
+            'rest_day_multiplier',
+            'holiday_regular_multiplier',
+            'holiday_special_multiplier',
+        ]

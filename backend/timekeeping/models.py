@@ -12,7 +12,7 @@ class Holiday(models.Model):
     name = models.CharField(max_length=100)
     date = models.DateField(unique=True)
     type = models.CharField(max_length=10, choices=HOLIDAY_TYPES)
-
+    multiplier = models.DecimalField(default=2.0, max_digits=4, decimal_places=2)
     is_national = models.BooleanField(default=True)  # Optional: future local holidays
 
     def __str__(self):
