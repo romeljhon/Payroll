@@ -13,16 +13,6 @@ function Check-Command($name, $command) {
     return $true
 }
 
-function Install-Python {
-    $installer = "$env:TEMP\python-installer.exe"
-    $url = "https://www.python.org/ftp/python/3.12.3/python-3.12.3-amd64.exe"
-    Write-Host "[INFO] Downloading Python..."
-    Invoke-WebRequest -Uri $url -OutFile $installer
-    Write-Host "[INFO] Installing Python silently..."
-    Start-Process -Wait $installer -ArgumentList '/quiet InstallAllUsers=1 PrependPath=1 Include_pip=1'
-    Remove-Item $installer -Force
-}
-
 function Setup-Python {
     if (-not (Check-Command "Python" "python")) {
         Install-Python
@@ -52,8 +42,22 @@ function Setup-Python {
     Write-Host "[INFO] Running Django migrations..."
     Push-Location backend
     python manage.py migrate
+
+    Write-Host "[INFO] Seeding Salary Components..."
+    python manage.py seed_salary_components
+
+    Write-Host "[INFO] Seeding Mock Restaurant Payroll Data..."
+    python manage.py seed_mock_payroll
+
+    Write-Host "[INFO] Seeding Mock Restaurant Employees..."
+    python manage.py seed_employees
+
+    Write-Host "[INFO] Seeding Time Logs..."
+    python manage.py seed_full_timelogs_2025
     Pop-Location
 }
+
+
 
 function Setup-Node {
     if (-not (Check-Command "Node.js" "node")) { return $false }
