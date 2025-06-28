@@ -46,7 +46,7 @@ type LoginFormValues = z.infer<typeof loginFormSchema>;
 /*  2. API helper (move to /src/ts apis/auth.ts if you wish)                  */
 /* -------------------------------------------------------------------------- */
 async function loginRequest(
-  username: string,
+  email: string,
   password: string,
 ): Promise<{ token: string }> {
   const res = await fetch(
@@ -56,7 +56,7 @@ async function loginRequest(
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email, password }),
     },
   );
 
