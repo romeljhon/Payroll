@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
+import { logoutRequest } from "@/lib/api";
 
 function getPageTitle(pathname: string): string {
   if (pathname === "/dashboard") return "Dashboard Overview";
@@ -56,7 +57,30 @@ export default function Header({ onMenuToggle }: HeaderProps) {
       localStorage.removeItem('userRole');
     }
     router.push('/login');
+
+    const handleLogout = async () => {
+    try {
+      await logoutRequest();
+
+      // Clear localStorage
+      localStorage.removeItem("token");
+      localStorage.removeItem("userEmail");
+
+      // toast({
+      //   title: "Logged out",
+      //   description: "You have been successfully logged out.",
+      // });
+
+      router.push("/login");
+    } catch (err: any) {
+      // toast({
+      //   variant: "destructive",
+      //   title: "Logout failed",
+      //   description: err.message ?? "Something went wrong",
+      // });
+    }
   };
+};
 
   if (!mounted) {
     return ( 

@@ -1,55 +1,69 @@
-
 "use client";
 
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, UserPlus, Edit, Trash2, Search, Filter, Eye } from "lucide-react";
-import React, { useState } from "react";
+import { MoreHorizontal, Search, Filter, Eye } from "lucide-react";
 import Link from "next/link";
 import AddEmployeeDialog from "@/components/dashboard/employees/add-employee-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { getAllEmployee } from "@/lib/api";
 
 export interface Employee {
-  id: string;
-  name: string;
+  id: number;
+  branch_name: string;
+  position: string;
+  first_name: string;
+  last_name: string;
   email: string;
-  role: string;
-  department: string;
-  status: "Active" | "Inactive" | "On Leave";
-  avatarUrl?: string;
+  phone: string;
+  hire_date: string;
+  active: boolean;
+  branch: number;
 }
 
-const initialEmployees: Employee[] = [
-  { id: "1", name: "Alice Wonderland", email: "alice@payease.com", role: "Software Engineer", department: "Engineering", status: "Active", avatarUrl: "https://placehold.co/40x40.png?text=AW" },
-  { id: "2", name: "Bob The Builder", email: "bob@payease.com", role: "Project Manager", department: "Management", status: "Active" },
-  { id: "3", name: "Charlie Chaplin", email: "charlie@payease.com", role: "UX Designer", department: "Design", status: "On Leave", avatarUrl: "https://placehold.co/40x40.png?text=CC" },
-  { id: "4", name: "Diana Prince", email: "diana@payease.com", role: "HR Specialist", department: "Human Resources", status: "Inactive" },
-  { id: "5", name: "Edward Elric", email: "edward@payease.com", role: "QA Tester", department: "Engineering", status: "Active", avatarUrl: "https://placehold.co/40x40.png?text=EE" },
-];
-
 export default function EmployeesPage() {
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddEmployeeDialogOpen, setIsAddEmployeeDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const filteredEmployees = employees.filter(emp => 
-    emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.role.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+  async function fetchData() {
+    try {
+      const employees = await getAllEmployee();
+      setEmployees(employees);
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Fetch Error",
+        description: err.message || "Could not load employee data.",
+      });
+    }
+  }
+
+  fetchData();
+}, []);
+
+  const filteredEmployees = employees.filter(emp => {
+    const fullName = `${emp.first_name} ${emp.last_name}`.toLowerCase();
+    return (
+      fullName.includes(searchTerm.toLowerCase()) ||
+      emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.position.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
   const handleEmployeeAdded = (newEmployee: Employee) => {
     setEmployees(prevEmployees => [newEmployee, ...prevEmployees]);
     setIsAddEmployeeDialogOpen(false);
     toast({
       title: "Employee Added",
-      description: `${newEmployee.name} has been successfully added.`,
+      description: `${newEmployee.first_name} ${newEmployee.last_name} has been successfully added.`,
     });
   };
 
@@ -63,22 +77,22 @@ export default function EmployeesPage() {
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
             <div className="relative flex-grow">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search employees..." 
-                  className="pl-10 w-full"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Search employees..." 
+                className="pl-10 w-full"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
             <div className="flex items-center gap-2">
-                <Button variant="outline" className="flex-grow sm:flex-grow-0"><Filter className="mr-2 h-4 w-4"/> Filter</Button>
-                <Button 
-                  className="bg-primary hover:bg-primary/90 flex-grow sm:flex-grow-0"
-                  onClick={() => setIsAddEmployeeDialogOpen(true)}
-                >
-                  <UserPlus className="mr-2 h-4 w-4" /> Add Employee
-                </Button>
+              <Button variant="outline" className="flex-grow sm:flex-grow-0"><Filter className="mr-2 h-4 w-4"/> Filter</Button>
+              <Button 
+                className="bg-primary hover:bg-primary/90 flex-grow sm:flex-grow-0"
+                onClick={() => setIsAddEmployeeDialogOpen(true)}
+              >
+                Add Employee
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -87,50 +101,35 @@ export default function EmployeesPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead className="min-w-[200px]">Name</TableHead>
-                  <TableHead className="min-w-[200px]">Email</TableHead>
-                  <TableHead className="min-w-[150px]">Role</TableHead>
-                  <TableHead className="min-w-[150px]">Department</TableHead>
-                  <TableHead className="min-w-[100px]">Status</TableHead>
-                  <TableHead className="text-right min-w-[100px]">Actions</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Position</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Hire Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredEmployees.map((employee) => (
                   <TableRow key={employee.id} className="hover:bg-muted/20 transition-colors">
-                    <TableCell className="font-medium">
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={employee.avatarUrl} alt={employee.name} data-ai-hint="person portrait"/>
-                          <AvatarFallback>{employee.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                        </Avatar>
-                        <span>{employee.name}</span>
-                      </div>
-                    </TableCell>
+                    <TableCell>{employee.first_name} {employee.last_name}</TableCell>
                     <TableCell>{employee.email}</TableCell>
-                    <TableCell>{employee.role}</TableCell>
-                    <TableCell>{employee.department}</TableCell>
+                    <TableCell>{employee.phone}</TableCell>
+                    <TableCell>{employee.position}</TableCell>
+                    <TableCell>{employee.branch_name}</TableCell>
+                    <TableCell>{employee.hire_date}</TableCell>
                     <TableCell>
-                      <Badge 
-                        variant={
-                          employee.status === "Active" ? "default" :
-                          employee.status === "On Leave" ? "secondary" : "outline"
-                        }
-                        className={
-                          employee.status === "Active" ? "bg-green-500/20 text-green-700 border-green-500/30 hover:bg-green-500/30" :
-                          employee.status === "On Leave" ? "bg-yellow-500/20 text-yellow-700 border-yellow-500/30 hover:bg-yellow-500/30" :
-                          "bg-red-500/20 text-red-700 border-red-500/30 hover:bg-red-500/30"
-                        }
-                      >
-                        {employee.status}
+                      <Badge variant={employee.active ? "default" : "outline"}>
+                        {employee.active ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="hover:bg-muted">
+                          <Button variant="ghost" size="icon">
                             <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Actions</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -139,12 +138,6 @@ export default function EmployeesPage() {
                               <Eye className="mr-2 h-4 w-4" /> View Details
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" /> Edit Employee
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete Employee
-                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -152,7 +145,7 @@ export default function EmployeesPage() {
                 ))}
                 {filteredEmployees.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                       No employees found matching your criteria.
                     </TableCell>
                   </TableRow>

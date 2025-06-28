@@ -1,40 +1,15 @@
-// src/ts apis/auth.ts
+
+
+// ACCOUNT API 
 export interface LoginResponse {
-  access?: string;      // JWT or session id – adjust to your backend
+  access?: string;     
   refresh?: string;
   user?: {
     id: number;
     username: string;
     role?: string;
-    // …any other props you return
   };
 }
-
-// export async function loginRequest(
-//   username: string,
-//   password: string,
-// ): Promise<LoginResponse> {
-//   const res = await fetch(
-//     `${process.env.NEXT_PUBLIC_API_BASE_URL}/payroll/accounts/login/`,
-//     {
-//       method: 'POST',
-//       headers: { 'Content-Type': 'application/json' },
-//       body: JSON.stringify({ username, password }),
-//       credentials: 'include', // drop if your backend doesn’t set cookies
-//     },
-//   );
-
-//   if (!res.ok) {
-//     // 400 / 401 etc.
-//     const detail = await res.text();
-//     throw new Error(
-//       detail || `Login failed – server returned ${res.status}`,
-//     );
-//   }
-
-//   return res.json();
-// }
-
 
 export async function loginRequest(username: string, password: string): Promise<{ token: string }> {
   const res = await fetch("http://127.0.0.1:8000/payroll/accounts/login/", {
@@ -49,4 +24,91 @@ export async function loginRequest(username: string, password: string): Promise<
   }
 
   return res.json(); // { token: "..." }
+}
+
+export async function logoutRequest(): Promise<void> {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    throw new Error("No token found");
+  }
+
+  const res = await fetch("http://127.0.0.1:8000/payroll/accounts/logout/", {
+    method: "POST",
+    headers: {
+      Authorization: `Token ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error("Logout failed");
+  }
+}
+
+export async function changePasswordRequest(current_password: string, new_password: string): Promise<string> {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch("http://127.0.0.1:8000/payroll/accounts/change-password/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${token}`,
+    },
+    body: JSON.stringify({ current_password, new_password }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || "Password change failed");
+  }
+
+  return data.token; // new token returned by backend
+}
+
+// EMPLOYEE API 
+
+export async function getAllEmployee() {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch("http://127.0.0.1:8000/payroll/api/employees/", {
+    method: "GET",
+    headers: {
+      "Authorization": `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to fetch employees");
+  }
+
+  return data; // this is the employee list
+}
+
+
+// ORGANIZATION API
+
+export async function getBranches() {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch("http://127.0.0.1:8000/payroll/api/branches/", {
+    method: "GET",
+    headers: {
+      "Authorization": `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to fetch employees");
+  }
+
+  return data; // this is the employee list
 }

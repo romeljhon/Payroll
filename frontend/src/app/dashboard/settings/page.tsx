@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -7,31 +6,66 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Bell, CreditCard, ShieldCheck, Save } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { changePasswordRequest } from "@/lib/api";
+import { User, Bell, CreditCard, ShieldCheck, Save, Eye, EyeOff } from "lucide-react";
 
 export default function SettingsPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPasswords, setShowPasswords] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedEmail = localStorage.getItem('userEmail');
       if (storedEmail) {
         setEmail(storedEmail);
-        setFullName(storedEmail.split('@')[0] || "User"); 
+        setFullName(storedEmail.split('@')[0] || "User");
       }
     }
   }, []);
 
   const handleProfileSave = () => {
-    // In a real app, you'd save this to a backend.
-    // Here, we could update localStorage if desired, but for now, just a toast.
     console.log("Profile saved:", { fullName, email, phone });
-    // Example: toast({ title: "Profile Updated" });
+    toast({ title: "Profile Updated", description: "Your profile was saved." });
   };
 
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast({
+        variant: "destructive",
+        title: "Password Mismatch",
+        description: "New password and confirmation do not match.",
+      });
+      return;
+    }
+
+    try {
+      const token = await changePasswordRequest(currentPassword, newPassword);
+      localStorage.setItem("token", token);
+
+      toast({
+        title: "Password Updated",
+        description: "Your password has been changed.",
+      });
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: err.message || "Failed to change password.",
+      });
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -57,8 +91,8 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               <div className="flex items-center space-x-4">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={`https://placehold.co/80x80.png?text=${fullName ? fullName.substring(0,2).toUpperCase() : 'UN'}`} alt={fullName || "User avatar"} data-ai-hint="person avatar" />
-                  <AvatarFallback>{fullName ? fullName.substring(0,2).toUpperCase() : 'UN'}</AvatarFallback>
+                  <AvatarImage src={`https://placehold.co/80x80.png?text=${fullName ? fullName.substring(0, 2).toUpperCase() : 'UN'}`} alt={fullName || "User avatar"} />
+                  <AvatarFallback>{fullName ? fullName.substring(0, 2).toUpperCase() : 'UN'}</AvatarFallback>
                 </Avatar>
                 <Button variant="outline">Change Picture</Button>
               </div>
@@ -104,7 +138,7 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="security">
           <Card className="shadow-lg">
             <CardHeader>
@@ -112,19 +146,28 @@ export default function SettingsPage() {
               <CardDescription>Manage your password and account security.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
+              <div className="relative">
                 <Label htmlFor="currentPassword">Current Password</Label>
-                <Input id="currentPassword" type="password" />
+                <Input id="currentPassword" type={showPasswords ? "text" : "password"} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+                <button type="button" className="absolute right-2 top-9 text-gray-500" onClick={() => setShowPasswords(!showPasswords)}>
+                  {showPasswords ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
-              <div>
+              <div className="relative">
                 <Label htmlFor="newPassword">New Password</Label>
-                <Input id="newPassword" type="password" />
+                <Input id="newPassword" type={showPasswords ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                <button type="button" className="absolute right-2 top-9 text-gray-500" onClick={() => setShowPasswords(!showPasswords)}>
+                  {showPasswords ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
-              <div>
+              <div className="relative">
                 <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input id="confirmPassword" type="password" />
+                <Input id="confirmPassword" type={showPasswords ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                <button type="button" className="absolute right-2 top-9 text-gray-500" onClick={() => setShowPasswords(!showPasswords)}>
+                  {showPasswords ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
-              <Button className="bg-primary hover:bg-primary/90"><Save className="mr-2 h-4 w-4" />Update Password</Button>
+              <Button className="bg-primary hover:bg-primary/90" onClick={handleChangePassword}><Save className="mr-2 h-4 w-4" />Update Password</Button>
             </CardContent>
           </Card>
         </TabsContent>
