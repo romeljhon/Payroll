@@ -1,7 +1,8 @@
-import type {Metadata} from 'next';
+import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ReactQueryProvider } from '@/lib/react-query-provider';
 
 export const metadata: Metadata = {
   title: 'PayEase - Payroll Management System',
@@ -27,7 +28,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <ReactQueryProvider> {/* ✅ wrap here */}
+            {children}
+            <Toaster />
+          </ReactQueryProvider>
           <Toaster />
         </ThemeProvider>
       </body>

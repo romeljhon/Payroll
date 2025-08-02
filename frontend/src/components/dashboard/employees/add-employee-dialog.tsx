@@ -1,5 +1,10 @@
 "use client";
 
+import { useEffect, useState, SetStateAction } from "react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,14 +30,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Employee } from "@/app/dashboard/employees/page";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { SetStateAction, useEffect, useState } from "react";
+
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getBranches } from "@/lib/api";
+import type { Employee } from "@/app/dashboard/employees/page";
+
+import { AddEmployee, getBranches } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
 // Schema & types
@@ -80,13 +83,13 @@ export default function AddEmployeeDialog({
     },
   });
 
-  // -------------------------------------------------------------------------
   // Load branches on mount
-  // -------------------------------------------------------------------------
   useEffect(() => {
     getBranches()
-      .then((result: SetStateAction<{ id: number; name: string; }[]>) => setBranches(result))
-      .catch((err: { message: any; }) => {
+      .then((result: SetStateAction<{ id: number; name: string }[]>) =>
+        setBranches(result)
+      )
+      .catch((err: { message: any }) => {
         console.error("Failed to load branches", err);
         toast({
           variant: "destructive",
@@ -96,34 +99,47 @@ export default function AddEmployeeDialog({
       });
   }, [toast]);
 
-  // -------------------------------------------------------------------------
   // Submit handler
-  // -------------------------------------------------------------------------
   async function onSubmit(values: AddEmployeeFormValues) {
     setIsSubmitting(true);
 
-    // TODO: replace this simulated delay with an actual POST to your backend
-    await new Promise((r) => setTimeout(r, 800));
+    try {
+      const response = await AddEmployee(JSON.stringify(values));
 
-    // Find the selected branch object for display purposes
-    const branchObj = branches.find((b) => b.id === parseInt(values.branch, 10));
+      const branchObj = branches.find(
+        (b) => b.id === parseInt(values.branch, 10)
+      );
 
-    const newEmployee: Employee = {
-      id: Date.now(), // <- replace with id from backend once POST is wired up
-      branch_name: branchObj?.name ?? "",
-      branch: parseInt(values.branch, 10),
-      position: values.position,
-      first_name: values.first_name,
-      last_name: values.last_name,
-      email: values.email,
-      phone: values.phone,
-      hire_date: values.hire_date,
-      active: true,
-    };
+      const newEmployee: Employee = {
+        id: response.id, // from backend
+        branch_name: branchObj?.name ?? "",
+        branch: parseInt(values.branch, 10),
+        position: values.position,
+        first_name: values.first_name,
+        last_name: values.last_name,
+        email: values.email,
+        phone: values.phone,
+        hire_date: values.hire_date,
+        active: true, // or derive from response if backend returns it
+      };
 
-    onEmployeeAdded(newEmployee);
-    form.reset();
-    setIsSubmitting(false);
+      onEmployeeAdded(newEmployee);
+      form.reset();
+      onOpenChange(false);
+
+      toast({
+        title: "Employee Added",
+        description: `${values.first_name} ${values.last_name} was added successfully.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error adding employee",
+        description: error.message ?? "Something went wrong.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -140,7 +156,10 @@ export default function AddEmployeeDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 py-4">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-5 py-4"
+          >
             {/* Branch */}
             <FormField
               control={form.control}
@@ -156,7 +175,10 @@ export default function AddEmployeeDialog({
                     </FormControl>
                     <SelectContent>
                       {branches.map((branch) => (
-                        <SelectItem key={branch.id} value={String(branch.id)}>
+                        <SelectItem
+                          key={branch.id}
+                          value={String(branch.id)}
+                        >
                           {branch.name}
                         </SelectItem>
                       ))}
@@ -167,7 +189,7 @@ export default function AddEmployeeDialog({
               )}
             />
 
-            {/* First & last name */}
+            {/* First & Last Name */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -206,7 +228,11 @@ export default function AddEmployeeDialog({
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="kazue@gmail.com" {...field} />
+                      <Input
+                        type="email"
+                        placeholder="kazue@gmail.com"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -250,7 +276,7 @@ export default function AddEmployeeDialog({
               )}
             />
 
-            {/* Hire date */}
+            {/* Hire Date */}
             <FormField
               control={form.control}
               name="hire_date"
@@ -282,7 +308,11 @@ export default function AddEmployeeDialog({
                 disabled={isSubmitting}
                 className="bg-primary hover:bg-primary/90"
               >
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save Employee"}
+                {isSubmitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  "Save Employee"
+                )}
               </Button>
             </DialogFooter>
           </form>

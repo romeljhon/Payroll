@@ -33,21 +33,23 @@ export default function EmployeesPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-  async function fetchData() {
-    try {
-      const employees = await getAllEmployee();
-      setEmployees(employees);
-    } catch (err: any) {
-      toast({
-        variant: "destructive",
-        title: "Fetch Error",
-        description: err.message || "Could not load employee data.",
-      });
+    async function fetchData() {
+      try {
+        const employees = await getAllEmployee();
+        setEmployees(employees);
+      } catch (err: any) {
+        toast({
+          variant: "destructive",
+          title: "Fetch Error",
+          description: err.message || "Could not load employee data.",
+        });
+      }
     }
-  }
 
-  fetchData();
-}, []);
+    fetchData();
+  }, []);
+
+  console.log( "employeessss",employees)
 
   const filteredEmployees = employees.filter(emp => {
     const fullName = `${emp.first_name} ${emp.last_name}`.toLowerCase();
@@ -78,16 +80,16 @@ export default function EmployeesPage() {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
             <div className="relative flex-grow">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search employees..." 
+              <Input
+                placeholder="Search employees..."
                 className="pl-10 w-full"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" className="flex-grow sm:flex-grow-0"><Filter className="mr-2 h-4 w-4"/> Filter</Button>
-              <Button 
+              <Button variant="outline" className="flex-grow sm:flex-grow-0"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
+              <Button
                 className="bg-primary hover:bg-primary/90 flex-grow sm:flex-grow-0"
                 onClick={() => setIsAddEmployeeDialogOpen(true)}
               >
