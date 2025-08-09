@@ -1,10 +1,7 @@
 from rest_framework import serializers
-from .models import PayrollPolicy, Position, SalaryComponent, SalaryStructure, PayrollRecord
+from .models import PayrollPolicy, SalaryComponent, SalaryStructure, PayrollRecord
+from positions.models import Position
 
-class PositionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Position
-        fields = '__all__'
 
 
 class SalaryComponentSerializer(serializers.ModelSerializer):

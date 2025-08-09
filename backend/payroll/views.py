@@ -6,18 +6,15 @@ from django.shortcuts import get_object_or_404
 from decimal import Decimal
 
 from timekeeping.models import TimeLog
-from .models import PayrollCycle, PayrollPolicy, Position, SalaryComponent, SalaryStructure, PayrollRecord
+from .models import PayrollCycle, PayrollPolicy, SalaryComponent, SalaryStructure, PayrollRecord
 from employees.models import Employee
-from .serializers import PayrollPolicySerializer, PositionSerializer, SalaryComponentSerializer, SalaryStructureSerializer, GeneratePayrollSerializer, PayrollSummarySerializer, PayslipComponentSerializer
+from .serializers import PayrollPolicySerializer, SalaryComponentSerializer, SalaryStructureSerializer, GeneratePayrollSerializer, PayrollSummarySerializer, PayslipComponentSerializer
 from datetime import date
 from django.db.models import Sum, Q
 from drf_spectacular.utils import extend_schema
 from payroll.services.payroll_cycles import get_dynamic_cutoff
 
-@extend_schema(tags=["Payroll"])
-class PositionViewSet(viewsets.ModelViewSet):
-    queryset = Position.objects.all()
-    serializer_class = PositionSerializer
+
 
 @extend_schema(tags=["Payroll"])
 class SalaryComponentViewSet(viewsets.ModelViewSet):
@@ -187,8 +184,8 @@ class PayslipPreviewView(APIView):
         return Response({
             "employee": {
                 "name": f"{employee.first_name} {employee.last_name}",
-                "position": employee.position.name,
-                "branch": employee.branch.name,
+                "position": getattr(employee.position, "name", None),
+                "branch": getattr(employee.branch, "name", None),
             },
             "month": month,
             "components": serializer.data,

@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'accounts',
     'employees',
+    'positions',
     'organization',
     'payroll',
     'timekeeping',

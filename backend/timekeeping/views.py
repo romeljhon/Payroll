@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from rest_framework import viewsets
 from timekeeping.models import TimeLog
 from timekeeping.serializers import TimeLogSerializer
