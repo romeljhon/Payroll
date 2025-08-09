@@ -8,7 +8,7 @@ from decimal import Decimal
 from timekeeping.models import TimeLog
 from .models import PayrollCycle, PayrollPolicy, SalaryComponent, SalaryStructure, PayrollRecord
 from employees.models import Employee
-from .serializers import PayrollPolicySerializer, SalaryComponentSerializer, SalaryStructureSerializer, GeneratePayrollSerializer, PayrollSummarySerializer, PayslipComponentSerializer
+from .serializers import PayrollPolicySerializer, PayrollSummaryResponseSerializer, SalaryComponentSerializer, SalaryStructureSerializer, GeneratePayrollSerializer, PayrollSummarySerializer, PayslipComponentSerializer
 from datetime import date
 from django.db.models import Sum, Q
 from drf_spectacular.utils import extend_schema
@@ -28,6 +28,9 @@ class SalaryStructureViewSet(viewsets.ModelViewSet):
 
 @extend_schema(tags=["Payroll"])
 class GeneratePayrollView(APIView):
+    # Make unauthenticated calls work in dev; keep auth in prod
+    # permission_classes = [AllowAny] if settings.DEBUG else [IsAuthenticated]
+
     def post(self, request):
         serializer = GeneratePayrollSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -38,39 +41,47 @@ class GeneratePayrollView(APIView):
         cycle_type = serializer.validated_data['payroll_cycle']
 
         employee = get_object_or_404(Employee, id=employee_id)
-        position = employee.position
+
+        # ✅ Guards for nullable relations
+        if not employee.branch or not getattr(employee.branch, 'business', None):
+            return Response(
+                {"error": "Employee must be assigned to a branch with an associated business."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if not employee.position:
+            return Response(
+                {"error": "Employee must have a position assigned to generate payroll."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         # 🔥 Get cutoff dates dynamically
         try:
-            cutoff_start, cutoff_end = get_dynamic_cutoff(
-                month, cycle_type, employee.branch.business
-            )
+            cutoff_start, cutoff_end = get_dynamic_cutoff(month, cycle_type, employee.branch.business)
         except PayrollCycle.DoesNotExist:
-            return Response({
-                "error": f"No payroll cycle of type {cycle_type} configured for this business."
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": f"No payroll cycle of type {cycle_type} configured for this business."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         # Fetch salary structure
+        position = employee.position
         structures = SalaryStructure.objects.filter(position=position)
         generated = []
 
         for struct in structures:
             component = struct.component
             # Compute amount
-            if struct.is_percentage:
-                amount = (Decimal(struct.amount) / 100) * base_salary
-            else:
-                amount = struct.amount
+            amount = (Decimal(struct.amount) / 100) * base_salary if struct.is_percentage else struct.amount
 
             # Create/update PayrollRecord
-            record, created = PayrollRecord.objects.update_or_create(
+            _, created = PayrollRecord.objects.update_or_create(
                 employee=employee,
                 month=month,
                 component=component,
                 defaults={
                     'amount': amount,
                     'is_13th_month': False,
-                    'payroll_cycle': cycle_type  # 🔁 save cycle type
+                    'payroll_cycle': cycle_type  # now aligned to model choices
                 }
             )
 
@@ -84,15 +95,18 @@ class GeneratePayrollView(APIView):
         return Response({
             "employee": f"{employee.first_name} {employee.last_name}",
             "month": month.strftime('%B %Y'),
-            "cutoff": {
-                "start": cutoff_start,
-                "end": cutoff_end,
-                "cycle_type": cycle_type
-            },
+            "cutoff": {"start": cutoff_start, "end": cutoff_end, "cycle_type": cycle_type},
             "records": generated
         }, status=status.HTTP_200_OK)
-
-@extend_schema(tags=["Payroll"])    
+    
+@extend_schema(
+    tags=["Payroll"],
+    parameters=[
+        {"name": "employee_id", "in": "query", "required": True, "schema": {"type": "integer"}},
+        {"name": "month", "in": "query", "required": True, "schema": {"type": "string", "format": "date"}},
+    ],
+    responses=PayrollSummaryResponseSerializer
+)
 class PayrollSummaryView(APIView):
     def get(self, request):
         employee_id = request.query_params.get('employee_id')

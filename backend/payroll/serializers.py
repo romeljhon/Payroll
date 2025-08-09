@@ -39,6 +39,14 @@ class PayrollSummarySerializer(serializers.ModelSerializer):
         model = PayrollRecord
         fields = ['component_name', 'component_type', 'amount']
 
+class PayrollSummaryResponseSerializer(serializers.Serializer):
+    employee = serializers.CharField()
+    month = serializers.CharField()  # or serializers.DateField() if you return YYYY-MM-DD
+    earnings = serializers.DecimalField(max_digits=12, decimal_places=2)
+    deductions = serializers.DecimalField(max_digits=12, decimal_places=2)
+    net_pay = serializers.DecimalField(max_digits=12, decimal_places=2)
+    details = PayrollSummarySerializer(many=True)
+
 class PayslipComponentSerializer(serializers.ModelSerializer):
     name = serializers.CharField(source='component.name')
     type = serializers.CharField(source='component.component_type')

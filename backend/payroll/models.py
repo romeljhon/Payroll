@@ -2,6 +2,7 @@ from django.db import models
 
 from organization.models import Business
 from positions.models import Position
+from django.core.exceptions import ValidationError
 # Create your models here.
 
     
@@ -35,14 +36,14 @@ class SalaryStructure(models.Model):
         return f"{self.position.name} - {self.component.name}: {value}"
 
 class PayrollRecord(models.Model):
-    CYCLE_MONTHLY = 'monthly'
-    CYCLE_FIRST_HALF = '1st_half'
-    CYCLE_SECOND_HALF = '2nd_half'
+    CYCLE_MONTHLY = 'MONTHLY'
+    CYCLE_FIRST_HALF = 'SEMI_1'
+    CYCLE_SECOND_HALF = 'SEMI_2'
 
     CYCLE_CHOICES = [
         (CYCLE_MONTHLY, 'Monthly'),
-        (CYCLE_FIRST_HALF, 'First Half'),
-        (CYCLE_SECOND_HALF, 'Second Half'),
+        (CYCLE_FIRST_HALF, 'Semi-Monthly 1st Half'),
+        (CYCLE_SECOND_HALF, 'Semi-Monthly 2nd Half'),
     ]
 
     employee = models.ForeignKey('employees.Employee', on_delete=models.CASCADE)
@@ -72,7 +73,11 @@ class PayrollCycle(models.Model):
         ('SEMI_2', 'Semi-Monthly 2nd Half'),
     ]
 
-    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='payroll_cycles')
+    business = models.ForeignKey(
+        Business,
+        on_delete=models.CASCADE,
+        related_name='payroll_cycles'
+    )
     name = models.CharField(max_length=50)
     cycle_type = models.CharField(max_length=10, choices=CYCLE_TYPE_CHOICES)
     start_day = models.PositiveSmallIntegerField()
@@ -81,6 +86,27 @@ class PayrollCycle(models.Model):
 
     class Meta:
         unique_together = ('business', 'cycle_type')
+        constraints = [
+            models.UniqueConstraint(
+                fields=["business", "cycle_type"],
+                name="uniq_business_cycle_type"
+            )
+        ]
+
+    def clean(self):
+        """
+        Validate that:
+        - start_day and end_day are between 1 and 31
+        - start_day <= end_day
+        """
+        if not (1 <= self.start_day <= 31):
+            raise ValidationError({"start_day": "Must be between 1 and 31."})
+        if not (1 <= self.end_day <= 31):
+            raise ValidationError({"end_day": "Must be between 1 and 31."})
+        if self.start_day > self.end_day:
+            raise ValidationError(
+                "start_day cannot be greater than end_day."
+            )
 
     def __str__(self):
         return f"{self.business.name} - {self.name} ({self.start_day}-{self.end_day})"

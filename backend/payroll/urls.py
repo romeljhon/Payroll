@@ -6,20 +6,23 @@ from .views import (
     Generate13thMonthView,
     PayslipPreviewView,
     BatchPayrollGenerationView,
-    PayrollPolicyViewSet,  # ✅ ViewSet for PayrollPolicy
+    PayrollPolicyViewSet,
+    SalaryComponentViewSet,
+    SalaryStructureViewSet,  # ✅ ViewSet for PayrollPolicy
 )
 
 # Initialize DRF router and register your ViewSet
 router = DefaultRouter()
-router.register(r'payroll-policies', PayrollPolicyViewSet, basename='payrollpolicy')
+router.register(r'payroll/components', SalaryComponentViewSet, basename='salarycomponent')
+router.register(r'payroll/structures', SalaryStructureViewSet, basename='salarystructure')
+router.register(r'payroll/policies', PayrollPolicyViewSet, basename='payrollpolicy')
 
 urlpatterns = [
-    path('generate/', GeneratePayrollView.as_view(), name='generate-payroll'),
-    path('summary/', PayrollSummaryView.as_view(), name='payroll-summary'),
-    path('generate-13th/', Generate13thMonthView.as_view(), name='generate-13th'),
-    path('payslip/', PayslipPreviewView.as_view(), name='payslip-preview'),
-    path('generate-batch/', BatchPayrollGenerationView.as_view(), name='generate-batch'),
+    path('payroll/generate/', GeneratePayrollView.as_view(), name='generate-payroll'),
+    path('payroll/summary/', PayrollSummaryView.as_view(), name='payroll-summary'),
+    path('payroll/13th/', Generate13thMonthView.as_view(), name='generate-13th'),
+    path('payroll/payslip/', PayslipPreviewView.as_view(), name='payslip-preview'),
+    path('payroll/batch/', BatchPayrollGenerationView.as_view(), name='generate-batch'),
 
-    # DRF ViewSet URLs
     path('', include(router.urls)),
 ]
