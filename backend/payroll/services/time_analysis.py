@@ -1,112 +1,122 @@
+# payroll/services/time_analysis.py
 from datetime import datetime, timedelta
-from decimal import Decimal
-from employees.models import TimeLog
+from decimal import Decimal, ROUND_HALF_UP
+
+from timekeeping.models import TimeLog
 from payroll.models import SalaryComponent
-from django.utils.timezone import make_aware
 
-def analyze_timelog(timelog, schedule):
-    policy = timelog.employee.branch.business.payroll_policy
-    grace = schedule.grace_minutes if schedule.grace_minutes else policy.grace_minutes
+def _to_hours(delta) -> Decimal:
+    return (Decimal(delta.total_seconds()) / Decimal(3600)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
-    components = []
+def _to_minutes(delta) -> Decimal:
+    return (Decimal(delta.total_seconds()) / Decimal(60)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+def analyze_timelog(timelog: TimeLog, schedule) -> list[dict]:
+    """
+    Produce time-based codes from a single timelog against a branch schedule.
+    Returns a list of dicts like {"code": "LATE", "minutes": Decimal(...)}.
+    """
+    # Guard: missing punches
+    if not timelog.time_in or not timelog.time_out:
+        return [{"code": "ABSENT", "hours": Decimal(schedule.min_hours_required)}]
+
+    # Policy overrides / schedule params
+    policy = getattr(timelog.employee.branch.business, "payroll_policy", None)
+    grace = schedule.grace_minutes if schedule.grace_minutes else (getattr(policy, "grace_minutes", 0) or 0)
 
     expected_in = schedule.time_in
     expected_out = schedule.time_out
-    min_hours = schedule.min_hours_required
-    work_days = schedule.get_work_days()
+    min_hours = Decimal(schedule.min_hours_required)
+    break_hours = Decimal(schedule.break_hours)
 
+    work_days = schedule.get_work_days()
     weekday = timelog.date.weekday()
     is_rest_day = weekday not in work_days
 
+    # Build datetimes; handle overnight shifts (out < in)
     dt_in = datetime.combine(timelog.date, timelog.time_in)
     dt_out = datetime.combine(timelog.date, timelog.time_out)
-    hours_worked = (dt_out - dt_in).total_seconds() / 3600 - float(schedule.break_hours)
+    if dt_out <= dt_in:
+        dt_out += timedelta(days=1)
+
+    hours_worked = _to_hours(dt_out - dt_in) - break_hours
+
+    components: list[dict] = []
 
     # LATE
-    if timelog.time_in > expected_in:
-        late_diff = (dt_in - datetime.combine(timelog.date, expected_in)).seconds / 60
-        if late_diff > grace:
-            components.append({
-                "code": "LATE",
-                "minutes": round(late_diff, 2)
-            })
+    exp_in_dt = datetime.combine(timelog.date, expected_in)
+    if dt_in > exp_in_dt:
+        late_delta = dt_in - exp_in_dt
+        late_minutes = _to_minutes(late_delta)
+        if late_minutes > Decimal(grace):
+            components.append({"code": "LATE", "minutes": late_minutes})
 
     # UNDERTIME
-    if timelog.time_out < expected_out:
-        undertime = (datetime.combine(timelog.date, expected_out) - dt_out).seconds / 60
-        components.append({
-            "code": "UNDERTIME",
-            "minutes": round(undertime, 2)
-        })
+    exp_out_dt = datetime.combine(timelog.date, expected_out)
+    if exp_out_dt <= exp_in_dt:
+        exp_out_dt += timedelta(days=1)  # expected overnight
+    if dt_out < exp_out_dt:
+        undertime_delta = exp_out_dt - dt_out
+        undertime_minutes = _to_minutes(undertime_delta)
+        components.append({"code": "UNDERTIME", "minutes": undertime_minutes})
 
-    # ABSENT
-    if hours_worked < float(min_hours):
-        components.append({
-            "code": "ABSENT",
-            "hours": round(float(min_hours) - hours_worked, 2)
-        })
+    # ABSENT (below minimum required hours)
+    if hours_worked < min_hours:
+        components.append({"code": "ABSENT", "hours": (min_hours - hours_worked).quantize(Decimal("0.01"))})
 
-    # OVERTIME
-    if hours_worked > 8 and not is_rest_day:
-        components.append({
-            "code": "OT",
-            "hours": round(hours_worked - 8, 2)
-        })
+    # OVERTIME (compute expected day length rather than fixed 8 hours)
+    expected_hours = _to_hours(exp_out_dt - exp_in_dt) - break_hours
+    if not is_rest_day and hours_worked > expected_hours:
+        components.append({"code": "OT", "hours": (hours_worked - expected_hours).quantize(Decimal("0.01"))})
 
     # REST DAY OT
-    if is_rest_day:
-        components.append({
-            "code": "REST_OT",
-            "hours": round(hours_worked, 2)
-        })
+    if is_rest_day and hours_worked > 0:
+        components.append({"code": "REST_OT", "hours": hours_worked.quantize(Decimal("0.01"))})
 
     return components
-
-
 
 def compute_time_based_components(employee, target_month):
     """
     Analyze all timelogs for an employee in a given month.
     Returns list of dicts with:
         - component (SalaryComponent instance)
-        - amount
+        - amount (Decimal)
     """
-
     branch_schedule = employee.branch.work_schedule
-    components = []
+    components: list[dict] = []
     year = target_month.year
     month = target_month.month
 
-    # Fetch all timelogs in the month
     logs = TimeLog.objects.filter(
         employee=employee,
         date__year=year,
         date__month=month
     )
 
+    # Simple rate example; replace with policy-driven config as needed
+    HOURLY_RATE = Decimal("100.00")
+    PER_MINUTE_RATE = Decimal("2.00")
+
     for log in logs:
         analyzed = analyze_timelog(log, branch_schedule)
 
         for entry in analyzed:
-            code = entry['code']
+            code = entry["code"]
             try:
                 component = SalaryComponent.objects.get(code=code)
             except SalaryComponent.DoesNotExist:
-                continue  # Skip if component not set up
+                continue  # Skip if not configured
 
-            # Compute amount (simplified: PHP per hour or per minute)
-            if 'hours' in entry:
-                multiplier = Decimal(100)  # example: PHP 100/hr
-                amount = Decimal(entry['hours']) * multiplier
-            elif 'minutes' in entry:
-                multiplier = Decimal(2)  # example: PHP 2/min
-                amount = Decimal(entry['minutes']) * multiplier
+            if "hours" in entry:
+                amount = (Decimal(entry["hours"]) * HOURLY_RATE).quantize(Decimal("0.01"))
+            elif "minutes" in entry:
+                amount = (Decimal(entry["minutes"]) * PER_MINUTE_RATE).quantize(Decimal("0.01"))
             else:
-                amount = Decimal(0)
+                amount = Decimal("0.00")
 
             components.append({
                 "component": component,
-                "amount": round(amount, 2),
+                "amount": amount,
             })
 
     return components

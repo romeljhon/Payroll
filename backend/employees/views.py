@@ -5,7 +5,7 @@ from drf_spectacular.utils import extend_schema
 
 @extend_schema(tags=["Employees"])
 class EmployeeViewSet(viewsets.ModelViewSet):
-    queryset = Employee.objects.all()
+    queryset = Employee.objects.select_related("branch", "position").all()
     serializer_class = EmployeeSerializer
 
     def get_queryset(self):

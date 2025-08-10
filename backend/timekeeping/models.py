@@ -1,4 +1,6 @@
 from django.db import models
+from datetime import datetime, timedelta
+from decimal import Decimal
 
 class Holiday(models.Model):
     REGULAR = 'REGULAR'
@@ -34,3 +36,16 @@ class TimeLog(models.Model):
 
     def __str__(self):
         return f"{self.employee} - {self.date}"
+    
+    def duration_hours(self):
+        if self.time_in and self.time_out:
+            t_in = datetime.combine(self.date, self.time_in)
+            t_out = datetime.combine(self.date, self.time_out)
+
+            # Handle overnight
+            if t_out < t_in:
+                t_out += timedelta(days=1)
+
+            hours = Decimal(t_out.timestamp() - t_in.timestamp()) / Decimal(3600)
+            return round(hours, 2)
+        return Decimal("0.00")

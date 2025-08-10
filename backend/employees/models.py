@@ -1,6 +1,6 @@
 from django.db import models
 from organization.models import Branch
-from payroll.models import Position
+from positions.models import Position
 from datetime import datetime, timedelta
 
 # Create your models here.
@@ -13,6 +13,9 @@ class Employee(models.Model):
     position = models.ForeignKey(Position, on_delete=models.PROTECT, null=True, blank=True, related_name='employees')
     hire_date = models.DateField()
     active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["last_name", "first_name"]
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"

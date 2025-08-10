@@ -4,6 +4,8 @@ from timekeeping.serializers import TimeLogSerializer
 from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.db import transaction
+from rest_framework import permissions, status
 
 
 # Create your views here.
@@ -15,33 +17,44 @@ class TimeLogViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         employee_id = self.request.query_params.get('employee_id')
-        month = self.request.query_params.get('month')
+        month_param = self.request.query_params.get('month')  # Expected: YYYY-MM
 
         if employee_id:
             qs = qs.filter(employee_id=employee_id)
-        if month:
-            qs = qs.filter(date__month=month.split('-')[1], date__year=month.split('-')[0])
+
+        if month_param:
+            try:
+                year, month_num = map(int, month_param.split('-'))
+                if 1 <= month_num <= 12:
+                    qs = qs.filter(date__year=year, date__month=month_num)
+            except (ValueError, AttributeError):
+                # If month format is invalid, just ignore it
+                pass
 
         return qs.order_by('-date')
     
 @extend_schema(tags=["Timekeeping"])
 class BulkTimeLogUploadView(APIView):
+
     def post(self, request):
-        logs = request.data.get("logs", [])
-        created = []
+        logs = request.data.get("logs", None)
+        if not isinstance(logs, list):
+            return Response(
+                {"error": "`logs` must be a list of timelog objects."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        for entry in logs:
-            serializer = TimeLogSerializer(data=entry)
-            if serializer.is_valid():
-                serializer.save()
-                created.append(serializer.data)
-            else:
-                return Response({
-                    "error": "Invalid data in one or more records.",
-                    "details": serializer.errors
-                }, status=400)
+        serializer = TimeLogSerializer(data=logs, many=True, context={"request": request})
+        serializer.is_valid(raise_exception=True)
 
-        return Response({
-            "message": f"{len(created)} time logs created successfully.",
-            "data": created
-        }, status=201)
+        # All-or-nothing write for consistency
+        with transaction.atomic():
+            instances = serializer.save()
+
+        return Response(
+            {
+                "message": f"{len(instances)} time logs created successfully.",
+                "data": TimeLogSerializer(instances, many=True).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )

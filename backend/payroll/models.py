@@ -85,7 +85,6 @@ class PayrollCycle(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        unique_together = ('business', 'cycle_type')
         constraints = [
             models.UniqueConstraint(
                 fields=["business", "cycle_type"],
@@ -95,18 +94,10 @@ class PayrollCycle(models.Model):
 
     def clean(self):
         """
-        Validate that:
-        - start_day and end_day are between 1 and 31
-        - start_day <= end_day
+        Allow wrap-around cutoffs (e.g., 25 -> 10).
+        Field validators already ensure 1–31 bounds.
         """
-        if not (1 <= self.start_day <= 31):
-            raise ValidationError({"start_day": "Must be between 1 and 31."})
-        if not (1 <= self.end_day <= 31):
-            raise ValidationError({"end_day": "Must be between 1 and 31."})
-        if self.start_day > self.end_day:
-            raise ValidationError(
-                "start_day cannot be greater than end_day."
-            )
+        pass  # No same-month restriction
 
     def __str__(self):
         return f"{self.business.name} - {self.name} ({self.start_day}-{self.end_day})"

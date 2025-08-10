@@ -1,5 +1,4 @@
 from rest_framework import serializers
-
 from timekeeping.models import TimeLog
 
 

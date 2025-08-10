@@ -2,7 +2,6 @@
 from decimal import Decimal
 from datetime import date
 from typing import Dict, List
-from django.db.models import Prefetch
 from payroll.models import PayrollRecord, SalaryComponent
 
 def get_employee_payslip_snapshot(employee_id: int, month: date, payroll_cycle: str) -> Dict:
