@@ -11,7 +11,11 @@ import { MoreHorizontal, Search, Filter, Eye } from "lucide-react";
 import Link from "next/link";
 import AddEmployeeDialog from "@/components/dashboard/employees/add-employee-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { getAllEmployee } from "@/lib/api";
+import { DeleteEmployee, getAllEmployee } from "@/lib/api";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
+
+const MySwal = withReactContent(Swal);
 
 export interface Employee {
   id: number;
@@ -29,6 +33,7 @@ export interface Employee {
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isAddEmployeeDialogOpen, setIsAddEmployeeDialogOpen] = useState(false);
   const { toast } = useToast();
 
@@ -45,11 +50,8 @@ export default function EmployeesPage() {
         });
       }
     }
-
     fetchData();
   }, []);
-
-  console.log( "employeessss",employees)
 
   const filteredEmployees = employees.filter(emp => {
     const fullName = `${emp.first_name} ${emp.last_name}`.toLowerCase();
@@ -66,6 +68,44 @@ export default function EmployeesPage() {
     toast({
       title: "Employee Added",
       description: `${newEmployee.first_name} ${newEmployee.last_name} has been successfully added.`,
+    });
+  };
+
+  console.log(selectedId)
+ const handleDelete = async (id: number) => {
+    setSelectedId(id); // ✅ store the selected id in state
+    MySwal.fire({
+      title: "Are you sure?",
+      text: "This action cannot be undone!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete it",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await DeleteEmployee(id);
+          setEmployees(prev => prev.filter(emp => emp.id !== id));
+          toast({
+            title: "Employee Deleted",
+            description: `Employee has been successfully removed.`,
+          });
+          MySwal.fire("Deleted!", "The employee has been removed.", "success");
+        } catch (err: any) {
+          toast({
+            variant: "destructive",
+            title: "Delete Failed",
+            description: err.message || "Could not delete employee.",
+          });
+          MySwal.fire("Error!", err.message || "Could not delete employee.", "error");
+        } finally {
+          setSelectedId(null); // ✅ clear after done
+        }
+      } else {
+        setSelectedId(null); // ✅ clear if cancelled
+      }
     });
   };
 
@@ -88,7 +128,9 @@ export default function EmployeesPage() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" className="flex-grow sm:flex-grow-0"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
+              <Button variant="outline" className="flex-grow sm:flex-grow-0">
+                <Filter className="mr-2 h-4 w-4" /> Filter
+              </Button>
               <Button
                 className="bg-primary hover:bg-primary/90 flex-grow sm:flex-grow-0"
                 onClick={() => setIsAddEmployeeDialogOpen(true)}
@@ -139,6 +181,12 @@ export default function EmployeesPage() {
                             <Link href={`/dashboard/employees/${employee.id}`} className="flex items-center w-full">
                               <Eye className="mr-2 h-4 w-4" /> View Details
                             </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDelete(employee.id)}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            🗑️ Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

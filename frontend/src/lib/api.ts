@@ -89,6 +89,27 @@ export async function getAllEmployee() {
   return data; // this is the employee list
 }
 
+export async function getAllEmployeeById(id: any) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(`http://127.0.0.1:8000/payroll/api/employees/${id}/`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to fetch employees");
+  }
+
+  return data; // this is the employee list
+}
+
 export async function AddEmployee(body: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
@@ -109,6 +130,43 @@ export async function AddEmployee(body: any) {
   }
 
   return data; // this is the employee list
+}
+
+export async function UpdateEmployee(id: string, body: any) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(`http://127.0.0.1:8000/payroll/api/employees/${id}/`, {
+    method: "PATCH",
+    headers: {
+      "Authorization": `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to update business");
+  }
+
+  return data;
+}
+
+export async function DeleteEmployee(id: any) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(`http://127.0.0.1:8000/payroll/api/employees/{id}/`, {
+    method: "DELETE",
+    headers: {
+      "Authorization": `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  return res; // expected to be the created branch
 }
 
 // ----------------POSITIONS--------------------- 
@@ -172,7 +230,6 @@ export async function DeletePositions(id: any) {
 
   return res; // expected to be the created branch
 }
-
 // UPDATE POSITIONS
 export async function UpdatePositions(id: string, body: any) {
   const token = localStorage.getItem("token");
@@ -195,8 +252,8 @@ export async function UpdatePositions(id: string, body: any) {
 
   return data;
 }
-// ----------------BRANCHES--------------------
 
+// ----------------BRANCHES--------------------
 // GET BRANCHES 
 export async function getBranches() {
   const token = localStorage.getItem("token");
@@ -257,7 +314,6 @@ export async function DeleteBranches(id: any) {
 
   return res; // expected to be the created branch
 }
-
 // UPDATE BRANCHES
 export async function UpdateBranches(id: string, body: any) {
   const token = localStorage.getItem("token");
@@ -280,8 +336,8 @@ export async function UpdateBranches(id: string, body: any) {
 
   return data;
 }
-// -----------------BUSINESS--------------------
 
+// -----------------BUSINESS--------------------
 // GET BUSINESS 
 export async function getBusiness() {
   const token = localStorage.getItem("token");
@@ -363,4 +419,96 @@ export async function UpdateBusiness(id: string, body: any) {
   }
 
   return data;
+}
+
+// ----------------POLICY------------------------
+
+// GET POLICY
+export async function getPolicys() {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch("http://127.0.0.1:8000/api/payroll/policies/", {
+    method: "GET",
+    headers: {
+      "Authorization": `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to fetch employees");
+  }
+
+  return data; // this is the employee list
+}
+// ADD POLICY 
+export async function AddPolicy(body: any) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch("http://127.0.0.1:8000/api/payroll/policies/", {
+    method: "POST",
+    headers: {
+      "Authorization": `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body), // ✅ stringify the body here
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to create branch");
+  }
+
+  return data; // expected to be the created branch
+}
+
+// -------------------CYCLE------------------------ 
+
+// GET POLICY
+export async function getPayrollCycle() {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch("http://127.0.0.1:8000/api/payroll/policies/", {
+    method: "GET",
+    headers: {
+      "Authorization": `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to fetch employees");
+  }
+
+  return data; // this is the employee list
+}
+// ADD POLICY 
+export async function AddPayrollCycle(body: any) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch("http://127.0.0.1:8000/api/payroll/policies/", {
+    method: "POST",
+    headers: {
+      "Authorization": `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body), // ✅ stringify the body here
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to create branch");
+  }
+
+  return data; // expected to be the created branch
 }
