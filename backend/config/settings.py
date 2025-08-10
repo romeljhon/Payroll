@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'organization',
     'payroll',
     'timekeeping',
+    'email_sender',
 ]
 
 MIDDLEWARE = [

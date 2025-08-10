@@ -1,0 +1,126 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Payslip {{ period }} · PayEase</title>
+  <!-- Keep head minimal for email; most clients ignore CSS here -->
+</head>
+<body style="margin:0;padding:0;background-color:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#1c1e21;line-height:1.4;">
+  <!-- Full-width wrapper -->
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#ffffff;margin:0;padding:0;">
+    <tr>
+      <td align="center" style="padding:20px 12px;">
+        
+        <!-- Centered container (fixed width for desktop, fluid on mobile) -->
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:100%;max-width:600px;border:1px solid #dddddd;border-radius:6px;overflow:hidden;background-color:#ffffff;">
+          
+          <!-- Header / Brand -->
+          <tr>
+            <td style="background-color:#3b5998;color:#ffffff;padding:20px;text-align:left;">
+              <div style="font-size:22px;font-weight:bold;margin:0;padding:0;">PayEase</div>
+              <div style="margin:8px 0 0 0;font-size:14px;">
+                Payslip for <strong>{{ period }}</strong>
+                <span style="display:inline-block;background-color:#2d4373;color:#ffffff;padding:2px 10px;border-radius:999px;font-size:12px;margin-left:6px;vertical-align:1px;">{{ cycle }}</span>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Greeting / Intro -->
+          <tr>
+            <td style="padding:18px 20px 8px 20px;">
+              <p style="margin:0 0 10px 0;font-size:14px;color:#1c1e21;">Hi {{ employee.first_name }},</p>
+              <p style="margin:0 0 0 0;font-size:14px;color:#555555;">Attached is your payslip for <strong>{{ period }}</strong>. Summary is below:</p>
+            </td>
+          </tr>
+
+          <!-- Totals (simple, email-safe “cards” using nested tables) -->
+          <tr>
+            <td style="padding:14px 20px 6px 20px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td width="33.33%" style="padding:6px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid #e6e9ef;background-color:#eef6ff;border-radius:6px;">
+                      <tr>
+                        <td style="padding:10px;">
+                          <div style="font-size:12px;color:#667085;text-transform:uppercase;letter-spacing:.3px;margin:0 0 4px 0;">Earnings</div>
+                          <div style="font-size:18px;font-weight:bold;text-align:right;margin:0;">₱{{ snapshot.totals.earnings|floatformat:2 }}</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="33.33%" style="padding:6px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid #e6e9ef;background-color:#fff3f3;border-radius:6px;">
+                      <tr>
+                        <td style="padding:10px;">
+                          <div style="font-size:12px;color:#667085;text-transform:uppercase;letter-spacing:.3px;margin:0 0 4px 0;">Deductions</div>
+                          <div style="font-size:18px;font-weight:bold;text-align:right;margin:0;">₱{{ snapshot.totals.deductions|floatformat:2 }}</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="33.33%" style="padding:6px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid #e6e9ef;background-color:#e9f8f0;border-radius:6px;">
+                      <tr>
+                        <td style="padding:10px;">
+                          <div style="font-size:12px;color:#667085;text-transform:uppercase;letter-spacing:.3px;margin:0 0 4px 0;">Net Pay</div>
+                          <div style="font-size:18px;font-weight:bold;text-align:right;margin:0;">₱{{ snapshot.totals.net_pay|floatformat:2 }}</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Breakdown Table -->
+          <tr>
+            <td style="padding:10px 20px 20px 20px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;border:1px solid #e6e9ef;">
+                <!-- Header row (avoid THEAD for max compatibility) -->
+                <tr>
+                  <td style="background-color:#3b5998;color:#ffffff;padding:10px;font-size:13px;font-weight:bold;">Component</td>
+                  <td style="background-color:#3b5998;color:#ffffff;padding:10px;font-size:13px;font-weight:bold;">Type</td>
+                  <td style="background-color:#3b5998;color:#ffffff;padding:10px;font-size:13px;font-weight:bold;text-align:right;">Amount</td>
+                </tr>
+
+                <!-- Rows -->
+                {% for row in snapshot.rows %}
+                <tr>
+                  <td style="padding:10px;border-top:1px solid #e6e9ef;font-size:14px;background-color:#ffffff;">{{ row.component }}</td>
+                  <td style="padding:10px;border-top:1px solid #e6e9ef;font-size:14px;background-color:#ffffff;">{{ row.type }}</td>
+                  <td style="padding:10px;border-top:1px solid #e6e9ef;font-size:14px;text-align:right;background-color:#ffffff;">₱{{ row.amount|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+
+                <!-- Totals -->
+                <tr>
+                  <td colspan="2" style="padding:10px;border-top:2px solid #3b5998;font-size:12px;text-transform:uppercase;color:#425b8a;background-color:#f8fafc;font-weight:bold;">Earnings</td>
+                  <td style="padding:10px;border-top:2px solid #3b5998;font-weight:bold;text-align:right;background-color:#f8fafc;">₱{{ snapshot.totals.earnings|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" style="padding:10px;border-top:1px solid #e6e9ef;font-size:12px;text-transform:uppercase;color:#425b8a;background-color:#f8fafc;font-weight:bold;">Deductions</td>
+                  <td style="padding:10px;border-top:1px solid #e6e9ef;font-weight:bold;text-align:right;background-color:#f8fafc;">₱{{ snapshot.totals.deductions|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" style="padding:10px;border-top:1px solid #e6e9ef;font-size:12px;text-transform:uppercase;color:#425b8a;background-color:#e9f1ff;font-weight:bold;">Net Pay</td>
+                  <td style="padding:10px;border-top:1px solid #e6e9ef;font-weight:bold;text-align:right;background-color:#e9f1ff;">₱{{ snapshot.totals.net_pay|floatformat:2 }}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:14px 20px 20px 20px;border-top:1px solid #eeeeee;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#666666;">This is an automated message from the PayEase payroll system.</p>
+            </td>
+          </tr>
+
+        </table>
+        <!-- /container -->
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
