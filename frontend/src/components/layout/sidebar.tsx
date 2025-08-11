@@ -14,6 +14,8 @@ import {
   Briefcase,
   Network,
   GitBranch,
+  Layers,
+  GitMerge,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import PayEaseLogo from "@/components/icons/payease-logo";
@@ -43,6 +45,8 @@ const payrollSubItems: NavItem[] = [
   { href: "/dashboard/payroll/policy", label: "Payroll Policy", icon: Calculator },
   { href: "/dashboard/payroll/positions", label: "Positions", icon: Briefcase },
   { href: "/dashboard/payroll/holidays", label: "Holidays", icon: CalendarPlus },
+  { href: "/dashboard/payroll/salary-component", label: "Components", icon: Layers },
+  { href: "/dashboard/payroll/salary-structure", label: "Salary Structure", icon: GitMerge },
   { href: "/dashboard/payroll/records", label: "Payroll Records", icon: Calculator },
   { href: "/dashboard/payslips/generate", label: "Generate Payslips", icon: Send },
 ];

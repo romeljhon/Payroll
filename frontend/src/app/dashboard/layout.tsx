@@ -2,13 +2,32 @@
 "use client";
 
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '@/components/layout/sidebar';
 import Header from '@/components/layout/header';
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import OnboardingDialog from '@/components/onboarding/onboarding-dialog';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const onboardingCompleted = localStorage.getItem('onboardingCompleted');
+      if (!onboardingCompleted) {
+        setShowOnboarding(true);
+      }
+    }
+  }, []);
+
+  const handleOnboardingFinish = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('onboardingCompleted', 'true');
+    }
+    setShowOnboarding(false);
+  };
+
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -24,6 +43,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Mobile Sidebar (Drawer) */}
       <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
         <SheetContent side="left" className="p-0 w-64 md:hidden">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Navigation Menu</SheetTitle>
+          </SheetHeader>
           <Sidebar />
         </SheetContent>
       </Sheet>
@@ -36,6 +58,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         </main>
       </div>
+      <OnboardingDialog isOpen={showOnboarding} onFinish={handleOnboardingFinish} />
     </div>
   );
 }
