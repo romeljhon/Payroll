@@ -48,7 +48,7 @@ export default function BranchesPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: DeleteBranches,
+    mutationFn: (id: number) => DeleteBranches(id), // ✅ pass id into the helper that uses BASE URL
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["branches"] });
       toast({
@@ -59,7 +59,7 @@ export default function BranchesPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete branch.",
+        description: error?.message || "Failed to delete branch.",
         variant: "destructive",
       });
     },

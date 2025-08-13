@@ -45,7 +45,7 @@ export default function BusinessPage() {
 
   // Delete business mutation
   const deleteMutation = useMutation({
-    mutationFn: DeleteBusiness,
+    mutationFn: (id: string) => DeleteBusiness(id), // ✅ call helper that hits API host
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["businesses"] });
       toast({
@@ -56,7 +56,7 @@ export default function BusinessPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete business.",
+        description: error?.message || "Failed to delete business.",
         variant: "destructive",
       });
     },
@@ -116,7 +116,9 @@ export default function BusinessPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="py-4 text-muted-foreground">Loading businesses...</div>
+            <div className="py-4 text-muted-foreground">
+              Loading businesses...
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -130,7 +132,9 @@ export default function BusinessPage() {
               <TableBody>
                 {businesses.map((business: Business) => (
                   <TableRow key={business.id}>
-                    <TableCell className="font-medium">{business.name}</TableCell>
+                    <TableCell className="font-medium">
+                      {business.name}
+                    </TableCell>
                     <TableCell>{business.tax_id}</TableCell>
                     <TableCell>{business.address}</TableCell>
                     <TableCell className="text-right">

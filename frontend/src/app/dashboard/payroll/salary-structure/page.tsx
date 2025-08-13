@@ -1,131 +1,338 @@
-
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
+import { GitMerge, Edit, Trash2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { GitMerge, Edit, Trash2 } from "lucide-react";
-import React, { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
 
-interface SalaryComponent {
+import {
+  getSalaryStructure,
+  AddSalaryStructure,
+  DeleteSalaryStructure,
+  UpdateSalaryStructure,
+  getPositions,
+  getSalaryComponent,
+} from "@/lib/api";
+
+/* ----------------------------- UI Types ----------------------------- */
+interface SalaryComponentUI {
   id: string;
   name: string;
   code: string;
-  type: "Earning" | "Deduction";
-  isTaxable: boolean;
+}
+interface PositionUI {
+  id: string;
+  name: string;
+}
+interface SalaryStructureUI {
+  id: string;
+  positionId: string;
+  componentId: string;
+  amount: number;
+  isPercentage: boolean;
 }
 
-interface SalaryStructure {
-    id: string;
-    position: string;
-    component: string;
-    amount: number;
-    isPercentage: boolean;
-}
-
-const initialComponents: SalaryComponent[] = [
-  { id: "1", name: "Basic Salary", code: "BASIC", type: "Earning", isTaxable: true },
-  { id: "2", name: "Transportation Allowance", code: "TRANSPO", type: "Earning", isTaxable: false },
-  { id: "3", name: "SSS Contribution", code: "SSS", type: "Deduction", isTaxable: false },
-  { id: "4", name: "Late Penalty", code: "LATE", type: "Deduction", isTaxable: false },
-];
-
-const initialPositions = [
-  { id: "1", name: "Software Engineer" },
-  { id: "2", name: "Project Manager" },
-  { id: "3", name: "UX Designer" },
-  { id: "4", name: "HR Specialist" },
-];
-
-const initialStructures: SalaryStructure[] = [
-    { id: '1', position: 'Software Engineer', component: 'Basic Salary', amount: 75000, isPercentage: false },
-    { id: '2', position: 'Software Engineer', component: 'Transportation Allowance', amount: 2000, isPercentage: false },
-    { id: '3', position: 'Project Manager', component: 'Basic Salary', amount: 90000, isPercentage: false },
-];
-
+/* ----------------------------- Component ---------------------------- */
 export default function SalaryStructurePage() {
-  const [components] = useState<SalaryComponent[]>(initialComponents);
-  const [salaryStructures, setSalaryStructures] = useState<SalaryStructure[]>(initialStructures);
   const { toast } = useToast();
 
-  const handleAddSalaryStructure = (event: React.FormEvent<HTMLFormElement>) => {
+  // lookups
+  const [components, setComponents] = useState<SalaryComponentUI[]>([]);
+  const [positions, setPositions] = useState<PositionUI[]>([]);
+
+  // list
+  const [salaryStructures, setSalaryStructures] = useState<SalaryStructureUI[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  // add form state
+  const [selectedPositionId, setSelectedPositionId] = useState<string>("");
+  const [selectedComponentId, setSelectedComponentId] = useState<string>("");
+
+  // edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<{ positionId: string; componentId: string; amount: string; isPercentage: boolean } | null>(null);
+
+  /* ----------------------------- helpers ----------------------------- */
+  const positionNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    positions.forEach((p) => m.set(p.id, p.name));
+    return m;
+  }, [positions]);
+
+  const componentNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    components.forEach((c) => m.set(c.id, c.name));
+    return m;
+  }, [components]);
+
+  /* ------------------------------ load ------------------------------- */
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+
+        const [apiComponents, apiPositions, apiStructures] = await Promise.all([
+          getSalaryComponent(), // returns: id, name, code, component_type, is_taxable
+          getPositions(),       // returns: id, name
+          getSalaryStructure(), // returns: id, position, component, amount, is_percentage  (IDs likely)
+        ]);
+
+        const mappedComponents: SalaryComponentUI[] = (apiComponents ?? []).map((c: any) => ({
+          id: String(c.id),
+          name: c.name,
+          code: c.code,
+        }));
+
+        const mappedPositions: PositionUI[] = (apiPositions ?? []).map((p: any) => ({
+          id: String(p.id),
+          name: p.name ?? p.title ?? p.position_name ?? `Position ${p.id}`,
+        }));
+
+        const mappedStructures: SalaryStructureUI[] = (apiStructures ?? []).map((s: any) => ({
+          id: String(s.id),
+          // assume `position` and `component` are IDs from backend
+          positionId: String(s.position),
+          componentId: String(s.component),
+          amount: Number(s.amount ?? 0),
+          isPercentage: Boolean(s.is_percentage),
+        }));
+
+        setComponents(mappedComponents);
+        setPositions(mappedPositions);
+        setSalaryStructures(mappedStructures);
+      } catch (err: any) {
+        toast({
+          variant: "destructive",
+          title: "Failed to load",
+          description: err?.message ?? "Please check your connection and auth token.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [toast]);
+
+  /* ------------------------------- add ------------------------------- */
+  const handleAddSalaryStructure = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const position = formData.get("position") as string;
-    const component = formData.get("component") as string;
-    const amount = formData.get("amount") as string;
+    const amountStr = String(formData.get("amount") ?? "").trim();
     const isPercentage = formData.get("isPercentage") === "on";
 
-    if (!position || !component || !amount) {
-        toast({ variant: "destructive", title: "Error", description: "Please fill all fields for the salary structure." });
-        return;
+    if (!selectedPositionId || !selectedComponentId || !amountStr) {
+      toast({ variant: "destructive", title: "Error", description: "Please fill all fields." });
+      return;
     }
 
-    const newStructure: SalaryStructure = {
-        id: String(Date.now()),
-        position,
-        component,
-        amount: parseFloat(amount),
-        isPercentage,
-    };
-    
-    setSalaryStructures(prev => [...prev, newStructure]);
+    const amount = parseFloat(amountStr);
+    if (Number.isNaN(amount)) {
+      toast({ variant: "destructive", title: "Invalid amount", description: "Please enter a valid number." });
+      return;
+    }
 
-    toast({ title: "Success", description: `Salary structure added successfully for ${position}.` });
-    event.currentTarget.reset();
+    try {
+      setLoading(true);
+      // Backend field names assumed as below — adjust if your serializer differs.
+      const body = {
+        position: Number(selectedPositionId),
+        component: Number(selectedComponentId),
+        amount,
+        is_percentage: isPercentage,
+      };
+      const created = await AddSalaryStructure(body);
+
+      // merge into UI list
+      setSalaryStructures((prev) => [
+        ...prev,
+        {
+          id: String(created.id),
+          positionId: String(created.position),
+          componentId: String(created.component),
+          amount: Number(created.amount ?? amount),
+          isPercentage: Boolean(created.is_percentage ?? isPercentage),
+        },
+      ]);
+
+      toast({
+        title: "Created",
+        description: `Added for ${positionNameById.get(selectedPositionId) ?? "position"}.`,
+      });
+
+      // reset
+      (event.target as HTMLFormElement).reset();
+      setSelectedPositionId("");
+      setSelectedComponentId("");
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Create failed",
+        description: err?.message ?? "Could not create salary structure.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ------------------------------ delete ----------------------------- */
+  const handleDelete = async (id: string) => {
+    try {
+      setLoading(true);
+      await DeleteSalaryStructure(id);
+      setSalaryStructures((prev) => prev.filter((s) => s.id !== id));
+      toast({ title: "Deleted", description: "Salary structure removed." });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Delete failed",
+        description: err?.message ?? "Could not delete salary structure.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ------------------------------- edit ------------------------------ */
+  const startEdit = (s: SalaryStructureUI) => {
+    setEditingId(s.id);
+    setEditDraft({
+      positionId: s.positionId,
+      componentId: s.componentId,
+      amount: String(s.amount),
+      isPercentage: s.isPercentage,
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditDraft(null);
+  };
+
+  const saveEdit = async () => {
+    if (!editingId || !editDraft) return;
+
+    const { positionId, componentId, amount, isPercentage } = editDraft;
+    const parsedAmount = parseFloat(amount);
+    if (!positionId || !componentId || Number.isNaN(parsedAmount)) {
+      toast({ variant: "destructive", title: "Invalid fields", description: "Complete all fields with valid values." });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const body = {
+        position: Number(positionId),
+        component: Number(componentId),
+        amount: parsedAmount,
+        is_percentage: isPercentage,
+      };
+      const updated = await UpdateSalaryStructure(editingId, body);
+
+      setSalaryStructures((prev) =>
+        prev.map((s) =>
+          s.id === editingId
+            ? {
+                id: String(updated.id ?? editingId),
+                positionId: String(updated.position ?? positionId),
+                componentId: String(updated.component ?? componentId),
+                amount: Number(updated.amount ?? parsedAmount),
+                isPercentage: Boolean(updated.is_percentage ?? isPercentage),
+              }
+            : s
+        )
+      );
+
+      toast({ title: "Updated", description: "Salary structure saved." });
+      cancelEdit();
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: err?.message ?? "Could not update salary structure.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="space-y-8">
+      {/* Create */}
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-primary flex items-center"><GitMerge className="mr-2 h-6 w-6" />Add Salary Structure</CardTitle>
-           <CardDescription>Assign salary components and amounts to job positions.</CardDescription>
+          <CardTitle className="text-primary flex items-center">
+            <GitMerge className="mr-2 h-6 w-6" />
+            Add Salary Structure
+          </CardTitle>
+          <CardDescription>Assign salary components and amounts to job positions.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleAddSalaryStructure} className="space-y-6">
             <div className="space-y-2">
-                <Label htmlFor="position">Position:</Label>
-                <Select name="position" required>
-                    <SelectTrigger id="position">
-                        <SelectValue placeholder="-------" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {initialPositions.map(p => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}
-                    </SelectContent>
-                </Select>
+              <Label htmlFor="position">Position:</Label>
+              <Select
+                value={selectedPositionId}
+                onValueChange={setSelectedPositionId}
+                disabled={loading || positions.length === 0}
+              >
+                <SelectTrigger id="position">
+                  <SelectValue placeholder={loading ? "Loading..." : positions.length ? "Select position" : "No positions found"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {positions.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
             <div className="space-y-2">
-                <Label htmlFor="component">Component:</Label>
-                <Select name="component" required>
-                    <SelectTrigger id="component">
-                        <SelectValue placeholder="-------" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {components.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                </Select>
+              <Label htmlFor="component">Component:</Label>
+              <Select
+                value={selectedComponentId}
+                onValueChange={setSelectedComponentId}
+                disabled={loading || components.length === 0}
+              >
+                <SelectTrigger id="component">
+                  <SelectValue placeholder={loading ? "Loading..." : components.length ? "Select component" : "No components found"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {components.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
             <div className="space-y-2">
-                <Label htmlFor="amount">Amount:</Label>
-                <Input id="amount" name="amount" type="number" step="any" placeholder="Enter amount" required />
+              <Label htmlFor="amount">Amount:</Label>
+              <Input id="amount" name="amount" type="number" step="any" placeholder="Enter amount" required />
             </div>
+
             <div className="flex items-center space-x-2">
-                <Checkbox id="isPercentage" name="isPercentage" />
-                <Label htmlFor="isPercentage">Is percentage</Label>
+              <Checkbox id="isPercentage" name="isPercentage" />
+              <Label htmlFor="isPercentage">Is percentage</Label>
             </div>
+
             <div className="flex justify-end">
-              <Button type="submit" className="bg-primary hover:bg-primary/90">Save</Button>
+              <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={loading}>
+                Save
+              </Button>
             </div>
           </form>
         </CardContent>
       </Card>
-      
+
+      {/* List */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-primary">Existing Salary Structures</CardTitle>
@@ -143,31 +350,138 @@ export default function SalaryStructurePage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {salaryStructures.map((structure) => (
-                <TableRow key={structure.id}>
-                  <TableCell className="font-medium">{structure.position}</TableCell>
-                  <TableCell>{structure.component}</TableCell>
-                  <TableCell>{structure.isPercentage ? `${structure.amount}%` : `₱${structure.amount.toFixed(2)}`}</TableCell>
-                  <TableCell>{structure.isPercentage ? "Percentage" : "Fixed"}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="hover:text-accent mr-2">
-                      <Edit className="h-4 w-4" />
-                       <span className="sr-only">Edit</span>
-                    </Button>
-                    <Button variant="ghost" size="icon" className="hover:text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                       <span className="sr-only">Delete</span>
-                    </Button>
+              {salaryStructures.map((s) => {
+                const isEditing = editingId === s.id;
+                const draft = editDraft ?? { positionId: "", componentId: "", amount: "", isPercentage: false };
+
+                return (
+                  <TableRow key={s.id}>
+                    <TableCell className="font-medium">
+                      {isEditing ? (
+                        <Select
+                          value={draft.positionId}
+                          onValueChange={(v) => setEditDraft((prev) => (prev ? { ...prev, positionId: v } : prev))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select position" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {positions.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        positionNameById.get(s.positionId) ?? s.positionId
+                      )}
+                    </TableCell>
+
+                    <TableCell>
+                      {isEditing ? (
+                        <Select
+                          value={draft.componentId}
+                          onValueChange={(v) => setEditDraft((prev) => (prev ? { ...prev, componentId: v } : prev))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select component" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {components.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        componentNameById.get(s.componentId) ?? s.componentId
+                      )}
+                    </TableCell>
+
+                    <TableCell>
+                      {isEditing ? (
+                        <Input
+                          value={draft.amount}
+                          onChange={(e) => setEditDraft((prev) => (prev ? { ...prev, amount: e.target.value } : prev))}
+                          type="number"
+                          step="any"
+                        />
+                      ) : s.isPercentage ? (
+                        `${s.amount}%`
+                      ) : (
+                        `₱${s.amount.toFixed(2)}`
+                      )}
+                    </TableCell>
+
+                    <TableCell>
+                      {isEditing ? (
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`pct-${s.id}`}
+                            checked={draft.isPercentage}
+                            onCheckedChange={(v) =>
+                              setEditDraft((prev) => (prev ? { ...prev, isPercentage: Boolean(v) } : prev))
+                            }
+                          />
+                          <Label htmlFor={`pct-${s.id}`}>Percentage</Label>
+                        </div>
+                      ) : s.isPercentage ? (
+                        "Percentage"
+                      ) : (
+                        "Fixed"
+                      )}
+                    </TableCell>
+
+                    <TableCell className="text-right">
+                      {isEditing ? (
+                        <>
+                          <Button variant="ghost" size="icon" className="hover:text-green-600 mr-1" onClick={saveEdit} disabled={loading}>
+                            <Check className="h-4 w-4" />
+                            <span className="sr-only">Save</span>
+                          </Button>
+                          <Button variant="ghost" size="icon" className="hover:text-muted-foreground" onClick={cancelEdit} disabled={loading}>
+                            <X className="h-4 w-4" />
+                            <span className="sr-only">Cancel</span>
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="hover:text-accent mr-2"
+                            onClick={() => startEdit(s)}
+                            disabled={loading}
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span className="sr-only">Edit</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="hover:text-destructive"
+                            onClick={() => handleDelete(s.id)}
+                            disabled={loading}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Delete</span>
+                          </Button>
+                        </>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+
+              {salaryStructures.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                    No salary structures defined yet.
                   </TableCell>
                 </TableRow>
-              ))}
-               {salaryStructures.length === 0 && (
-                 <TableRow>
-                    <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
-                        No salary structures defined yet.
-                    </TableCell>
-                 </TableRow>
-                )}
+              )}
             </TableBody>
           </Table>
         </CardContent>

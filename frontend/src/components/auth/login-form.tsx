@@ -51,7 +51,7 @@ async function loginRequest(
 ): Promise<{ token: string }> {
   const res = await fetch(
     `${
-      process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000"
+      process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://9fzvx8-8000.csb.app/"
     }/payroll/accounts/login/`,
     {
       method: "POST",

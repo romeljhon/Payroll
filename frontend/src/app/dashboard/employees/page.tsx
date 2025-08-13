@@ -2,11 +2,29 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Search, Filter, Eye } from "lucide-react";
 import Link from "next/link";
 import AddEmployeeDialog from "@/components/dashboard/employees/add-employee-dialog";
@@ -53,7 +71,7 @@ export default function EmployeesPage() {
     fetchData();
   }, []);
 
-  const filteredEmployees = employees.filter(emp => {
+  const filteredEmployees = employees.filter((emp) => {
     const fullName = `${emp.first_name} ${emp.last_name}`.toLowerCase();
     return (
       fullName.includes(searchTerm.toLowerCase()) ||
@@ -63,7 +81,7 @@ export default function EmployeesPage() {
   });
 
   const handleEmployeeAdded = (newEmployee: Employee) => {
-    setEmployees(prevEmployees => [newEmployee, ...prevEmployees]);
+    setEmployees((prevEmployees) => [newEmployee, ...prevEmployees]);
     setIsAddEmployeeDialogOpen(false);
     toast({
       title: "Employee Added",
@@ -71,8 +89,7 @@ export default function EmployeesPage() {
     });
   };
 
-  console.log(selectedId)
- const handleDelete = async (id: number) => {
+  const handleDelete = async (id: number) => {
     setSelectedId(id); // ✅ store the selected id in state
     MySwal.fire({
       title: "Are you sure?",
@@ -87,7 +104,7 @@ export default function EmployeesPage() {
       if (result.isConfirmed) {
         try {
           await DeleteEmployee(id);
-          setEmployees(prev => prev.filter(emp => emp.id !== id));
+          setEmployees((prev) => prev.filter((emp) => emp.id !== id));
           toast({
             title: "Employee Deleted",
             description: `Employee has been successfully removed.`,
@@ -99,7 +116,11 @@ export default function EmployeesPage() {
             title: "Delete Failed",
             description: err.message || "Could not delete employee.",
           });
-          MySwal.fire("Error!", err.message || "Could not delete employee.", "error");
+          MySwal.fire(
+            "Error!",
+            err.message || "Could not delete employee.",
+            "error"
+          );
         } finally {
           setSelectedId(null); // ✅ clear after done
         }
@@ -115,7 +136,9 @@ export default function EmployeesPage() {
         <CardHeader className="flex flex-col md:flex-row justify-between md:items-center gap-4">
           <div>
             <CardTitle className="text-primary">Employee Management</CardTitle>
-            <CardDescription>View, add, and manage employee information.</CardDescription>
+            <CardDescription>
+              View, add, and manage employee information.
+            </CardDescription>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
             <div className="relative flex-grow">
@@ -157,8 +180,13 @@ export default function EmployeesPage() {
               </TableHeader>
               <TableBody>
                 {filteredEmployees.map((employee) => (
-                  <TableRow key={employee.id} className="hover:bg-muted/20 transition-colors">
-                    <TableCell>{employee.first_name} {employee.last_name}</TableCell>
+                  <TableRow
+                    key={employee.id}
+                    className="hover:bg-muted/20 transition-colors"
+                  >
+                    <TableCell>
+                      {employee.first_name} {employee.last_name}
+                    </TableCell>
                     <TableCell>{employee.email}</TableCell>
                     <TableCell>{employee.phone}</TableCell>
                     <TableCell>{employee.position}</TableCell>
@@ -178,15 +206,23 @@ export default function EmployeesPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/employees/${employee.id}`} className="flex items-center w-full">
+                            <Link
+                              href={`/dashboard/employees/${employee.id}`}
+                              className="flex items-center w-full"
+                            >
                               <Eye className="mr-2 h-4 w-4" /> View Details
                             </Link>
                           </DropdownMenuItem>
+
                           <DropdownMenuItem
                             onClick={() => handleDelete(employee.id)}
                             className="text-red-600 focus:text-red-600"
+                            // Optional: visually indicate “busy” for this row
+                            disabled={selectedId === employee.id}
                           >
-                            🗑️ Delete
+                            {selectedId === employee.id
+                              ? "⏳ Deleting..."
+                              : "🗑️ Delete"}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -195,7 +231,10 @@ export default function EmployeesPage() {
                 ))}
                 {filteredEmployees.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                    <TableCell
+                      colSpan={8}
+                      className="text-center py-10 text-muted-foreground"
+                    >
                       No employees found matching your criteria.
                     </TableCell>
                   </TableRow>
