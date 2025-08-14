@@ -1,14 +1,15 @@
 from django.db import models
 from datetime import datetime, timedelta
 from decimal import Decimal
+from common.constants import PH_HOLIDAY_TYPES
 
 class Holiday(models.Model):
     REGULAR = 'REGULAR'
     SPECIAL = 'SPECIAL'
 
     HOLIDAY_TYPES = [
-        (REGULAR, 'Regular Holiday'),
-        (SPECIAL, 'Special Non-Working Holiday'),
+        (REGULAR, PH_HOLIDAY_TYPES["REGULAR"]),
+        (SPECIAL, PH_HOLIDAY_TYPES["SPECIAL"]),
     ]
 
     name = models.CharField(max_length=100)

@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from .models import PayrollPolicy, SalaryComponent, SalaryStructure, PayrollRecord
-from positions.models import Position
+from .models import PayrollPolicy, SalaryComponent, SalaryStructure, PayrollRecord, PayrollCycle
+
 
 
 
@@ -30,6 +30,22 @@ class GeneratePayrollSerializer(serializers.Serializer):
         ],
         default='SEMI_1'
     )
+
+class PayrollCycleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PayrollCycle
+        fields = "__all__"
+
+    def validate(self, attrs):
+        start_day = attrs.get("start_day", getattr(self.instance, "start_day", None))
+        end_day   = attrs.get("end_day",   getattr(self.instance, "end_day",   None))
+
+        for label, val in (("start_day", start_day), ("end_day", end_day)):
+            if not (1 <= int(val) <= 31):
+                raise serializers.ValidationError({label: "Must be between 1 and 31."})
+
+        # No same-month restriction—wrap-around is allowed (e.g., 25 -> 10).
+        return attrs
 
 class PayrollSummarySerializer(serializers.ModelSerializer):
     component_name = serializers.CharField(source='component.name', read_only=True)

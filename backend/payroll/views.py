@@ -1,20 +1,24 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, filters
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from decimal import Decimal, InvalidOperation
 from django.db import transaction
+from payroll.utils import _period_bounds_for_month
 from timekeeping.models import TimeLog
 from .models import PayrollCycle, PayrollPolicy, SalaryComponent, SalaryStructure, PayrollRecord
 from employees.models import Employee
-from .serializers import PayrollPolicySerializer, PayrollSummaryResponseSerializer, SalaryComponentSerializer, SalaryStructureSerializer, GeneratePayrollSerializer, PayrollSummarySerializer, PayslipComponentSerializer
+from .serializers import PayrollPolicySerializer, PayrollSummaryResponseSerializer, SalaryComponentSerializer, SalaryStructureSerializer, GeneratePayrollSerializer, PayrollSummarySerializer, PayslipComponentSerializer, PayrollCycleSerializer
 from datetime import date
 from django.db.models import Sum, Q
 from drf_spectacular.utils import extend_schema
 from payroll.services.payroll_cycles import get_dynamic_cutoff
 from payroll.services.mandatories import compute_mandatories_monthly, allocate_to_cycle
 from django.utils.dateparse import parse_date
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.decorators import action
+from common.filters import PayrollCycleFilter
 
 
 
@@ -446,6 +450,91 @@ class BatchPayrollGenerationView(APIView):
             "processed": len(results),
             "results": results
         }, status=200)
+@extend_schema(tags=["Payroll"])    
+class PayrollCycleViewSet(viewsets.ModelViewSet):
+    """
+    CRUD for payroll cycles + helpful helpers:
+
+    - GET  /payroll-cycles/?business=1&cycle_type=SEMI_1
+    - GET  /payroll-cycles/containing/?date=2025-08-14&business=1
+    - GET  /payroll-cycles/period/?year=2025&month=8&business=1
+    - POST /payroll-cycles/{id}/activate/
+    - POST /payroll-cycles/{id}/deactivate/
+    """
+    queryset = PayrollCycle.objects.select_related("business").all().order_by("business_id", "name")
+    serializer_class = PayrollCycleSerializer
+
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
+    filterset_class = PayrollCycleFilter
+    search_fields = ["name", "business__name", "cycle_type"]
+    ordering_fields = ["business_id", "name", "cycle_type", "is_active"]
+    ordering = ["business_id", "name"]
+
+    @action(detail=True, methods=["post"])
+    def activate(self, request, pk=None):
+        obj = self.get_object()
+        if not obj.is_active:
+            obj.is_active = True
+            obj.save(update_fields=["is_active"])
+        return Response({"status": "activated", "id": obj.id})
+
+    @action(detail=True, methods=["post"])
+    def deactivate(self, request, pk=None):
+        obj = self.get_object()
+        if obj.is_active:
+            obj.is_active = False
+            obj.save(update_fields=["is_active"])
+        return Response({"status": "deactivated", "id": obj.id})
+
+    @action(detail=False, methods=["get"])
+    def containing(self, request):
+        date_str = request.query_params.get("date")
+        if not date_str:
+            return Response({"detail": "Query param `date` is required (YYYY-MM-DD)."}, status=400)
+        try:
+            target = date.fromisoformat(date_str)
+        except ValueError:
+            return Response({"detail": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+
+        qs = self.filter_queryset(self.get_queryset())
+        matches = [c for c in qs if _date_in_cycle(c.start_day, c.end_day, target)]
+        serializer = self.get_serializer(matches, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"])
+    def period(self, request):
+        """
+        Compute concrete period bounds for each cycle for a given month.
+        Query params:
+          - year=YYYY (required)
+          - month=1..12 (required)
+          - business=<id> (optional)
+        """
+        try:
+            year = int(request.query_params.get("year"))
+            month = int(request.query_params.get("month"))
+            if not (1 <= month <= 12):
+                raise ValueError
+        except (TypeError, ValueError):
+            return Response({"detail": "Provide valid `year` and `month` query params."}, status=400)
+
+        qs = self.filter_queryset(self.get_queryset())
+        out = []
+        for c in qs:
+            start_dt, end_dt = _period_bounds_for_month(year, month, c.start_day, c.end_day)
+            out.append({
+                "id": c.id,
+                "business": c.business_id,
+                "name": c.name,
+                "cycle_type": c.cycle_type,
+                "is_active": c.is_active,
+                "start_date": start_dt.isoformat(),
+                "end_date": end_dt.isoformat(),
+            })
+
+        # Optional: order by start_date then name for readability
+        out.sort(key=lambda x: (x["start_date"], x["name"]))
+        return Response(out)
 
 @extend_schema(tags=["Payroll"])
 class PayrollPolicyViewSet(viewsets.ModelViewSet):

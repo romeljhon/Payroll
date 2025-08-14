@@ -8,7 +8,8 @@ from .views import (
     BatchPayrollGenerationView,
     PayrollPolicyViewSet,
     SalaryComponentViewSet,
-    SalaryStructureViewSet,  # ✅ ViewSet for PayrollPolicy
+    SalaryStructureViewSet,
+    PayrollCycleViewSet  # ✅ ViewSet for PayrollPolicy
 )
 
 # Initialize DRF router and register your ViewSet
@@ -16,6 +17,7 @@ router = DefaultRouter()
 router.register(r'payroll/components', SalaryComponentViewSet, basename='salarycomponent')
 router.register(r'payroll/structures', SalaryStructureViewSet, basename='salarystructure')
 router.register(r'payroll/policies', PayrollPolicyViewSet, basename='payrollpolicy')
+router.register(r'payroll/cycles', PayrollCycleViewSet, basename='payrollcycle')
 
 urlpatterns = [
     path('payroll/generate/', GeneratePayrollView.as_view(), name='generate-payroll'),

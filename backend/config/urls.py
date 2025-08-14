@@ -19,6 +19,6 @@ urlpatterns = [
     # 🔧 Your actual app routes
     path('payroll/accounts/', include('accounts.urls')),
     path('payroll/api/', include('config.api_urls')),
-    path('payroll/', include('payroll.urls')),
-    path('api/', include('payroll.urls')),
+    # path('payroll/', include('payroll.urls')),
+    # path('api/', include('payroll.urls')),
 ]

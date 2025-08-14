@@ -1,10 +1,10 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from timekeeping.views import BulkTimeLogUploadView, TimeLogViewSet
-from .views import BulkTimeLogUploadView  # 👈 Import the bulk upload view
+from timekeeping.views import BulkTimeLogUploadView, TimeLogViewSet, HolidayViewSet
 
 router = DefaultRouter()
-router.register('timelogs', TimeLogViewSet)
+router.register(r'timelogs', TimeLogViewSet)
+router.register(r'holidays', HolidayViewSet, basename='holidays')
 
 urlpatterns = [
     path('', include(router.urls)),
