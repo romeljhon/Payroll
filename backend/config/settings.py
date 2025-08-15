@@ -51,11 +51,27 @@ CSRF_TRUSTED_ORIGINS = list(set([
 # ---------------------------------------------------------------------------
 # In dev, allow all for convenience; otherwise keep explicit allowlist.
 CORS_ALLOW_ALL_ORIGINS = DEBUG
+
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:9002",
+    "https://payroll-eight-inky.vercel.app",
 ]
+
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.vercel\.app$",
+]
+
+CORS_ALLOW_HEADERS = ['*']
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://payroll-eight-inky.vercel.app",
+    # and optionally all vercel apps:
+    "https://*.vercel.app",
+]
+
 
 # ---------------------------------------------------------------------------
 # Applications
