@@ -23,9 +23,17 @@ DEBUG = env.bool('DEBUG', default=False)
 
 # Allow explicit hosts from .env; add sensible dev defaults.
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[
-                         '127.0.0.1', 'localhost', 'testserver'])
+    '127.0.0.1', 'localhost', 'testserver'
+])
+
+# Add the Render hostname for production
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
+# The rest of your settings
 if DEBUG:
-    # Allow any CodeSandbox subdomain like 9fzvx8-8000.csb.app
+    # This block will still only run in development
     if '.csb.app' not in ALLOWED_HOSTS:
         ALLOWED_HOSTS += ['.csb.app']
 
