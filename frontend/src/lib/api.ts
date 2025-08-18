@@ -81,6 +81,27 @@ export async function changePasswordRequest(
   return data.token; // new token returned by backend
 }
 
+export async function CreateAccount(body: any) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/accounts/register/",
+    {
+      method: "POST",
+      body: body,
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to fetch employees");
+  }
+
+  return data; // this is the employee list
+}
+
 // -------------------------------------------------------------------EMPLOYEE API----------------------------------
 // GET EMPLOYEE
 export async function getAllEmployee() {
@@ -532,7 +553,6 @@ export async function getTimekeeping() {
   }
   return data;
 }
-
 // ADD Timekeeping
 export async function AddTimekeeping(body: any) {
   const token = localStorage.getItem("token");
@@ -563,7 +583,6 @@ export async function AddTimekeeping(body: any) {
   }
   return data; // created record
 }
-
 // DELETE Timekeeping
 export async function DeleteTimekeeping(id: number | string) {
   const token = localStorage.getItem("token");
@@ -593,7 +612,6 @@ export async function DeleteTimekeeping(id: number | string) {
   }
   return true; // 204 expected
 }
-
 // UPDATE Timekeeping  ✅ fixed to use BASE URL
 export async function UpdateTimekeeping(id: string | number, body: any) {
   const token = localStorage.getItem("token");
@@ -676,13 +694,13 @@ export async function AddPolicy(body: any) {
 }
 
 // ------------------------------------------------------------------------CYCLE-----------------------------------------
-// GET POLICY
+// GET CYCLE
 export async function getPayrollCycle() {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/payroll/policies/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/payrollcycle/",
     {
       method: "GET",
       headers: {
@@ -700,13 +718,13 @@ export async function getPayrollCycle() {
 
   return data; // this is the employee list
 }
-// ADD POLICY
+// ADD CYCLE
 export async function AddPayrollCycle(body: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/payroll/policies/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/payrollcycle/",
     {
       method: "POST",
       headers: {
@@ -725,6 +743,44 @@ export async function AddPayrollCycle(body: any) {
 
   return data; // expected to be the created branch
 }
+// DELETE CYCLE
+export async function DeleteCycle(id: any) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(`/payroll/api/payrollcycle/${id}/`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  return res; // expected to be the created branch
+}
+// UPDATE CYCLE
+export async function UpdateCycle(id: string, body: any) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(`/payroll/api/payrollcycle/${id}/`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to update salary component");
+  }
+
+  return data;
+}
+
 
 // ----------------------------------------------------------------------SALARY COMPONENT----------------------------------------------------
 // GET SalaryComponent

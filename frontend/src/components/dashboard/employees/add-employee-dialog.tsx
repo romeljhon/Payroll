@@ -35,7 +35,7 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Employee } from "@/app/dashboard/employees/page";
 
-import { AddEmployee, getBranches } from "@/lib/api";
+import { AddEmployee, getBranches, getPositions } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
 // Schema & types
@@ -68,6 +68,7 @@ export default function AddEmployeeDialog({
 }: AddEmployeeDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [branches, setBranches] = useState<{ id: number; name: string }[]>([]);
+  const [positions, setPositions] = useState<{ id: number; name: string }[]>([]);
   const { toast } = useToast();
 
   const form = useForm<AddEmployeeFormValues>({
@@ -83,11 +84,11 @@ export default function AddEmployeeDialog({
     },
   });
 
-  // Load branches on mount
+  // Load branches & positions on mount
   useEffect(() => {
     getBranches()
-      .then((result: SetStateAction<{ id: number; name: string }[]>) =>
-        setBranches(result)
+      .then((result) =>
+        setBranches(result as SetStateAction<{ id: number; name: string }[]>)
       )
       .catch((err: { message: any }) => {
         console.error("Failed to load branches", err);
@@ -95,6 +96,19 @@ export default function AddEmployeeDialog({
           variant: "destructive",
           title: "Error loading branches",
           description: err.message ?? "Could not fetch branch list.",
+        });
+      });
+
+    getPositions()
+      .then((result) =>
+        setPositions(result as SetStateAction<{ id: number; name: string }[]>)
+      )
+      .catch((err: { message: any }) => {
+        console.error("Failed to load positions", err);
+        toast({
+          variant: "destructive",
+          title: "Error loading positions",
+          description: err.message ?? "Could not fetch position list.",
         });
       });
   }, [toast]);
@@ -109,18 +123,21 @@ export default function AddEmployeeDialog({
       const branchObj = branches.find(
         (b) => b.id === parseInt(values.branch, 10)
       );
+      const positionObj = positions.find(
+        (p) => p.id === parseInt(values.position, 10)
+      );
 
       const newEmployee: Employee = {
         id: response.id, // from backend
         branch_name: branchObj?.name ?? "",
         branch: parseInt(values.branch, 10),
-        position: values.position,
+        position: positionObj?.name ?? "",
         first_name: values.first_name,
         last_name: values.last_name,
         email: values.email,
         phone: values.phone,
         hire_date: values.hire_date,
-        active: true, // or derive from response if backend returns it
+        active: true, // or derive from backend if returned
       };
 
       onEmployeeAdded(newEmployee);
@@ -175,10 +192,7 @@ export default function AddEmployeeDialog({
                     </FormControl>
                     <SelectContent>
                       {branches.map((branch) => (
-                        <SelectItem
-                          key={branch.id}
-                          value={String(branch.id)}
-                        >
+                        <SelectItem key={branch.id} value={String(branch.id)}>
                           {branch.name}
                         </SelectItem>
                       ))}
@@ -245,7 +259,7 @@ export default function AddEmployeeDialog({
                   <FormItem>
                     <FormLabel>Phone</FormLabel>
                     <FormControl>
-                      <Input placeholder="123‑456‑7890" {...field} />
+                      <Input placeholder="123-456-7890" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -267,8 +281,11 @@ export default function AddEmployeeDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="manager">Manager</SelectItem>
-                      <SelectItem value="cashier">Cashier</SelectItem>
+                      {positions.map((pos) => (
+                        <SelectItem key={pos.id} value={String(pos.id)}>
+                          {pos.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
