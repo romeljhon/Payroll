@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -16,13 +15,18 @@ import {
   GitBranch,
   Layers,
   GitMerge,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import PayEaseLogo from "@/components/icons/payease-logo";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import React, { useState, useEffect } from "react";
 import {
-  Accordion, AccordionItem, AccordionTrigger, AccordionContent
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
 } from "@/components/ui/accordion";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -59,6 +63,7 @@ const organizationSubItems: NavItem[] = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -66,7 +71,7 @@ export default function Sidebar() {
 
   if (!mounted) {
     return (
-      <aside className="w-64 flex-shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground flex flex-col shadow-md">
+      <aside className="w-64 flex-shrink-0 border-r border-sidebar-border bg-sidebar/80 backdrop-blur-md text-sidebar-foreground flex flex-col shadow-lg">
         <div className="h-16 flex items-center justify-center px-6 border-b border-sidebar-border">
           <Skeleton className="h-8 w-32 bg-muted/50" />
         </div>
@@ -82,28 +87,77 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-64 flex-shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground flex flex-col shadow-md">
-      <div className="h-16 flex items-center justify-center px-6 border-b border-sidebar-border">
-        <Link href="/dashboard" className="flex items-center space-x-2">
-          <PayEaseLogo className="h-8 w-auto text-primary" />
-        </Link>
+    <aside
+      className={cn(
+        "flex-shrink-0 border-r border-sidebar-border bg-sidebar/80 backdrop-blur-md text-sidebar-foreground flex flex-col shadow-lg transition-all duration-300",
+        collapsed ? "w-16" : "w-64"
+      )}
+    >
+      {/* Logo + Toggle */}
+      <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
+        {!collapsed && (
+          <Link href="/dashboard" className="flex items-center space-x-2">
+            <PayEaseLogo className="h-8 w-auto text-primary" />
+          </Link>
+        )}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="p-2 rounded-lg hover:bg-sidebar-hover transition-all duration-200"
+        >
+          {collapsed ? (
+            <ChevronRight className="h-5 w-5" />
+          ) : (
+            <ChevronLeft className="h-5 w-5" />
+          )}
+        </button>
       </div>
+
       <ScrollArea className="flex-1">
-        <nav className="py-6 px-4 space-y-2">
+        <nav className="py-6 px-2 space-y-2">
           {navItems.map((item) => {
+            const isActive =
+              pathname === item.href ||
+              (item.label === "Payroll " &&
+                (pathname.startsWith("/dashboard/payroll") ||
+                  pathname.startsWith("/dashboard/payslips"))) ||
+              (item.label === "Organization" &&
+                pathname.startsWith("/dashboard/organization"));
+
+            // Payroll Dropdown
             if (item.label === "Payroll ") {
-              return (
+              return collapsed ? (
+                <Link
+                  key={item.label}
+                  href="/dashboard/payroll/cycle"
+                  className={cn(
+                    "group relative flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200 hover:scale-[1.02]",
+                    isActive
+                      ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
+                      : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
+                  )}
+                >
+                  {isActive && (
+                    <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>
+                  )}
+                  <item.icon className="h-5 w-5" />
+                </Link>
+              ) : (
                 <Accordion type="single" collapsible key={item.label} className="w-full">
-                  <AccordionItem value="item-1" className="border-none">
-                    <AccordionTrigger className={cn(
-                      "flex items-center px-3 py-2.5 rounded-lg transition-colors duration-150 hover:no-underline",
-                      pathname.startsWith("/dashboard/payroll") || pathname.startsWith("/dashboard/payslips")
-                        ? "bg-sidebar-active text-sidebar-active-foreground shadow-sm"
-                        : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
-                    )}>
+                  <AccordionItem value="payroll" className="border-none">
+                    <AccordionTrigger
+                      className={cn(
+                        "group relative flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 hover:no-underline",
+                        isActive
+                          ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
+                          : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
+                      )}
+                    >
+                      {isActive && (
+                        <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>
+                      )}
                       <div className="flex items-center space-x-3">
                         <item.icon className="h-5 w-5" />
-                        <span className="font-medium">{item.label}</span>
+                        <span className="font-semibold tracking-wide">{item.label}</span>
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="ml-6 border-l border-sidebar-border py-1 space-y-1">
@@ -112,9 +166,9 @@ export default function Sidebar() {
                           key={subItem.label}
                           href={subItem.href}
                           className={cn(
-                            "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors duration-150",
+                            "flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-[1.02]",
                             pathname === subItem.href
-                              ? "bg-sidebar-active text-sidebar-active-foreground shadow-sm"
+                              ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
                               : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
                           )}
                         >
@@ -127,19 +181,42 @@ export default function Sidebar() {
                 </Accordion>
               );
             }
+
+            // Organization Dropdown
             if (item.label === "Organization") {
-              return (
+              return collapsed ? (
+                <Link
+                  key={item.label}
+                  href="/dashboard/organization/branches"
+                  className={cn(
+                    "group relative flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200 hover:scale-[1.02]",
+                    isActive
+                      ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
+                      : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
+                  )}
+                >
+                  {isActive && (
+                    <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>
+                  )}
+                  <item.icon className="h-5 w-5" />
+                </Link>
+              ) : (
                 <Accordion type="single" collapsible key={item.label} className="w-full">
-                  <AccordionItem value="item-1" className="border-none">
-                    <AccordionTrigger className={cn(
-                      "flex items-center px-3 py-2.5 rounded-lg transition-colors duration-150 hover:no-underline",
-                      pathname.startsWith("/dashboard/organization")
-                        ? "bg-sidebar-active text-sidebar-active-foreground shadow-sm"
-                        : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
-                    )}>
+                  <AccordionItem value="org" className="border-none">
+                    <AccordionTrigger
+                      className={cn(
+                        "group relative flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 hover:no-underline",
+                        isActive
+                          ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
+                          : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
+                      )}
+                    >
+                      {isActive && (
+                        <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>
+                      )}
                       <div className="flex items-center space-x-3">
                         <item.icon className="h-5 w-5" />
-                        <span className="font-medium">{item.label}</span>
+                        <span className="font-semibold tracking-wide">{item.label}</span>
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="ml-6 border-l border-sidebar-border py-1 space-y-1">
@@ -148,9 +225,9 @@ export default function Sidebar() {
                           key={subItem.label}
                           href={subItem.href}
                           className={cn(
-                            "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors duration-150",
+                            "flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-[1.02]",
                             pathname === subItem.href
-                              ? "bg-sidebar-active text-sidebar-active-foreground shadow-sm"
+                              ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
                               : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
                           )}
                         >
@@ -163,10 +240,25 @@ export default function Sidebar() {
                 </Accordion>
               );
             }
+
+            // Regular Links
             return (
-              <Link key={item.label} href={item.href} className={cn("flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors duration-150", pathname === item.href ? "bg-sidebar-active text-sidebar-active-foreground shadow-sm" : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground")} aria-current={pathname === item.href ? "page" : undefined}>
+              <Link
+                key={item.label}
+                href={item.href}
+                className={cn(
+                  "group relative flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200 hover:scale-[1.02]",
+                  isActive
+                    ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
+                    : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
+                )}
+                aria-current={isActive ? "page" : undefined}
+              >
+                {isActive && (
+                  <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>
+                )}
                 <item.icon className="h-5 w-5" />
-                <span className="font-medium">{item.label}</span>
+                {!collapsed && <span className="font-semibold tracking-wide">{item.label}</span>}
               </Link>
             );
           })}
