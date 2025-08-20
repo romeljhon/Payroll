@@ -42,3 +42,12 @@ class TimeLogSerializer(serializers.ModelSerializer):
 
     def get_duration(self, obj):
         return obj.duration_hours()
+    
+
+class TimeLogImportSerializer(serializers.Serializer):
+    file = serializers.FileField()
+    employee_field = serializers.ChoiceField(choices=["employee_id", "employee_number", "email"], default="employee_id")
+    date_format = serializers.CharField(required=False, default="%Y-%m-%d")
+    time_format = serializers.CharField(required=False, default="%H:%M")
+    has_header = serializers.BooleanField(required=False, default=True)
+    dry_run = serializers.BooleanField(required=False, default=False)

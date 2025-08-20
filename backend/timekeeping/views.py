@@ -1,6 +1,6 @@
 from rest_framework import viewsets
 from timekeeping.models import TimeLog, Holiday
-from timekeeping.serializers import TimeLogSerializer, HolidaySerializer
+from timekeeping.serializers import TimeLogSerializer, HolidaySerializer, TimeLogImportSerializer
 from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -12,6 +12,8 @@ from common.utils_ph_holidays import get_ph_recurring_holidays
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action 
 from datetime import date
+
+from timekeeping.importers.timelog_importer import ImportOptions, import_timelogs
 
 
 # Create your views here.
@@ -147,4 +149,36 @@ class HolidayViewSet(viewsets.ModelViewSet):
         return Response(
             {"year": year, "created_dates": created, "skipped_existing_dates": skipped},
             status=status.HTTP_201_CREATED,
+        )
+    
+class TimeLogImportView(APIView):
+    # permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        ser = TimeLogImportSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        f = ser.validated_data["file"]
+
+        opts = ImportOptions(
+            employee_field=ser.validated_data["employee_field"],
+            date_format=ser.validated_data["date_format"],
+            time_format=ser.validated_data["time_format"],
+            has_header=ser.validated_data["has_header"],
+            dry_run=ser.validated_data["dry_run"],
+        )
+
+        result = import_timelogs(f.file, f.name, options=opts)
+
+        return Response(
+            {
+                "message": "Dry run complete." if opts.dry_run else "Import complete.",
+                "summary": {
+                    "total_rows": result.total_rows,
+                    "created": result.created,
+                    "updated": result.updated,
+                    "skipped": result.skipped,
+                },
+                "errors": result.errors[:100],  # cap to avoid huge payloads
+            },
+            status=status.HTTP_200_OK,
         )
