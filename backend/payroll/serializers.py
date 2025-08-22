@@ -110,5 +110,4 @@ class PayrollRecordSerializer(serializers.ModelSerializer):
             'amount',
             'is_13th_month',
             'payroll_cycle',
-            'run'
         ]

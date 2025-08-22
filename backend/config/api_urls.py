@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 
 from organization.views import BusinessViewSet, BranchViewSet
 from employees.views import EmployeeViewSet
-from payroll.views import SalaryComponentViewSet, SalaryStructureViewSet, PayrollCycleViewSet
+from payroll.views import SalaryComponentViewSet, SalaryStructureViewSet, PayrollCycleViewSet, PayrollRecordViewSet
 from positions.views import PositionViewSet
 from timekeeping.views import TimeLogViewSet, HolidayViewSet
 from email_sender.views import SendSinglePayslipView
@@ -19,6 +19,7 @@ router.register('structure', SalaryStructureViewSet)
 router.register('timekeeping', TimeLogViewSet)
 router.register('holidays', HolidayViewSet)
 router.register('payrollcycle', PayrollCycleViewSet)
+router.register('records', PayrollRecordViewSet)
 
 urlpatterns = [
     # Non-ViewSet endpoints go here:
