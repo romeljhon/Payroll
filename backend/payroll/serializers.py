@@ -91,3 +91,24 @@ class PayrollPolicySerializer(serializers.ModelSerializer):
             'holiday_regular_multiplier',
             'holiday_special_multiplier',
         ]
+
+class PayrollRecordSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source='employee.get_full_name', read_only=True)
+    component_name = serializers.CharField(source='component.name', read_only=True)
+    component_type = serializers.CharField(source='component.component_type', read_only=True)
+
+    class Meta:
+        model = PayrollRecord
+        fields = [
+            'id',
+            'employee',
+            'employee_name',
+            'month',
+            'component',
+            'component_name',
+            'component_type',
+            'amount',
+            'is_13th_month',
+            'payroll_cycle',
+            'run'
+        ]

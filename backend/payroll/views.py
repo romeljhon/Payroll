@@ -20,6 +20,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
 from common.filters import PayrollCycleFilter
 from payroll.services.payroll_engine import generate_payroll_for_employee, generate_batch_payroll
+from payroll.services.helpers import normalize_month, compute_regular_monthly_gross
 
 
 
@@ -34,31 +35,6 @@ class SalaryStructureViewSet(viewsets.ModelViewSet):
     serializer_class = SalaryStructureSerializer
 
 
-def normalize_month(value) -> date:
-    """
-    Accepts date or string 'YYYY-MM' / 'YYYY-MM-DD' and returns first day of that month.
-    """
-    if isinstance(value, date):
-        return value.replace(day=1)
-    d = parse_date(value)
-    if d:
-        return d.replace(day=1)
-    year, month = map(int, str(value).split("-")[:2])
-    return date(year, month, 1)
-
-def compute_regular_monthly_gross(position, base_salary: Decimal) -> Decimal:
-    """
-    Compute monthly 'regular' gross (BASIC + other EARNING items from SalaryStructure).
-    Uses base_salary + position's structures. Excludes time-based items (OT/holiday).
-    """
-    total = Decimal("0.00")
-    from payroll.models import SalaryStructure, SalaryComponent
-    structures = SalaryStructure.objects.filter(position=position).select_related("component")
-    for s in structures:
-        amt = (Decimal(s.amount) / Decimal("100.00")) * base_salary if s.is_percentage else Decimal(s.amount)
-        if s.component.component_type == SalaryComponent.EARNING:
-            total += amt
-    return total.quantize(Decimal("0.01"))
 
 def upsert_mandatories(employee, month, cycle_type, gross_monthly: Decimal, policy):
     """
