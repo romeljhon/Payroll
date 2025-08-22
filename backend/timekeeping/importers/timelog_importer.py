@@ -124,38 +124,58 @@ def _is_excel(upload_name: str) -> bool:
 def _iter_rows_from_file(file_obj, filename: str, has_header: bool) -> Tuple[Iterable[dict], set]:
     """
     Yields rows as dicts with string keys. Returns (iterator, columns_set).
-    Supports CSV and Excel. For Excel we use openpyxl (install it if needed).
+    Supports CSV and Excel. Prefers openpyxl for Excel; falls back to pandas if available.
     """
+    def _normalize(keys):
+        return {str(k).strip() for k in keys}
+
     if _is_excel(filename):
+        # Try openpyxl (streaming, low memory)
         try:
             import openpyxl  # noqa: F401
+
+            file_obj.seek(0)
+            wb = openpyxl.load_workbook(file_obj, data_only=True, read_only=True)
+            ws = wb.active
+            rows = ws.iter_rows(values_only=True)
+
+            if has_header:
+                headers = [str(c).strip() if c is not None else "" for c in next(rows)]
+            else:
+                first = next(rows)
+                headers = [f"col_{i+1}" for i in range(len(first))]
+                rows = (first,) + tuple(rows)
+
+            columns = _normalize(headers)
+
+            def _gen():
+                for r in rows:
+                    yield {headers[i]: (r[i] if i < len(r) else None) for i in range(len(headers))}
+
+            return _gen(), columns
+
         except ImportError:
-            raise RuntimeError("openpyxl is required to read Excel files. pip install openpyxl")
+            # Fallback to pandas if available
+            try:
+                import pandas as pd
+                file_obj.seek(0)
+                df = pd.read_excel(file_obj, header=0 if has_header else None, dtype=object)
+                if not has_header:
+                    df.columns = [f"col_{i+1}" for i in range(df.shape[1])]
+                headers = [str(c).strip() for c in df.columns.tolist()]
+                columns = _normalize(headers)
 
-        file_obj.seek(0)
-        wb = openpyxl.load_workbook(file_obj, data_only=True, read_only=True)
-        ws = wb.active
-        rows = ws.iter_rows(values_only=True)
-        headers = []
-        if has_header:
-            headers = [str(c).strip() if c is not None else "" for c in next(rows)]
-        else:
-            # If no header: generate generic headers
-            first = next(rows)
-            headers = [f"col_{i+1}" for i in range(len(first))]
-            rows = (first,) + tuple(rows)
-        columns = _normalize_row_keys(headers)
+                def _gen():
+                    for _, row in df.iterrows():
+                        yield {headers[i]: row[i] for i in range(len(headers))}
 
-        def _gen():
-            for r in rows:
-                d = {headers[i]: r[i] if i < len(r) else None for i in range(len(headers))}
-                yield d
+                return _gen(), columns
 
-        return _gen(), columns
-
-    # CSV
+            except ImportError:
+                raise RuntimeError("Excel file detected but no engine available. Install either 'openpyxl' or 'pandas'.")
+    
+    # ---- CSV path ----
     file_obj.seek(0)
-    # Try to decode as UTF-8; if not, fallback to latin-1
     raw = file_obj.read()
     if isinstance(raw, bytes):
         try:
@@ -165,23 +185,27 @@ def _iter_rows_from_file(file_obj, filename: str, has_header: bool) -> Tuple[Ite
     else:
         text = raw
 
+    import io, csv
     sio = io.StringIO(text)
+
     if has_header:
         reader = csv.DictReader(sio)
-        columns = _normalize_row_keys(reader.fieldnames or [])
+        columns = _normalize(reader.fieldnames or [])
         return reader, columns
-    else:
-        reader = csv.reader(sio)
-        first = next(reader)
-        headers = [f"col_{i+1}" for i in range(len(first))]
-        columns = _normalize_row_keys(headers)
 
-        def _gen():
-            yield {headers[i]: first[i] for i in range(len(headers))}
-            for r in reader:
-                yield {headers[i]: (r[i] if i < len(r) else None) for i in range(len(headers))}
+    # No header: synthesize column names
+    r = csv.reader(sio)
+    first = next(r)
+    headers = [f"col_{i+1}" for i in range(len(first))]
+    columns = _normalize(headers)
 
-        return _gen(), columns
+    def _csv_gen():
+        yield {headers[i]: first[i] for i in range(len(headers))}
+        for row in r:
+            yield {headers[i]: (row[i] if i < len(row) else None) for i in range(len(headers))}
+
+    return _csv_gen(), columns
+
 
 
 @transaction.atomic
