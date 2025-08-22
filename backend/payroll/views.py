@@ -9,7 +9,7 @@ from payroll.utils import _period_bounds_for_month
 from timekeeping.models import TimeLog
 from .models import PayrollCycle, PayrollPolicy, SalaryComponent, SalaryStructure, PayrollRecord
 from employees.models import Employee
-from .serializers import PayrollPolicySerializer, PayrollRecordSerializer, PayrollSummaryResponseSerializer, SalaryComponentSerializer, SalaryStructureSerializer, GeneratePayrollSerializer, PayrollSummarySerializer, PayslipComponentSerializer, PayrollCycleSerializer
+from .serializers import PayrollPolicySerializer, PayrollRecordSerializer, PayrollSummaryResponseSerializer, SalaryComponentSerializer, SalaryStructureBulkCreateSerializer, SalaryStructureSerializer, GeneratePayrollSerializer, PayrollSummarySerializer, PayslipComponentSerializer, PayrollCycleSerializer
 from datetime import date
 from django.db.models import Sum, Q
 from drf_spectacular.utils import extend_schema
@@ -34,6 +34,12 @@ class SalaryStructureViewSet(viewsets.ModelViewSet):
     queryset = SalaryStructure.objects.all()
     serializer_class = SalaryStructureSerializer
 
+    def create(self, request, *args, **kwargs):
+        serializer = SalaryStructureBulkCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response({"message": "Salary structures created successfully"}, status=status.HTTP_201_CREATED)
 
 
 def upsert_mandatories(employee, month, cycle_type, gross_monthly: Decimal, policy):

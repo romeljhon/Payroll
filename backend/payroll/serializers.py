@@ -2,8 +2,6 @@ from rest_framework import serializers
 from .models import PayrollPolicy, SalaryComponent, SalaryStructure, PayrollRecord, PayrollCycle
 
 
-
-
 class SalaryComponentSerializer(serializers.ModelSerializer):
     class Meta:
         model = SalaryComponent
@@ -17,6 +15,30 @@ class SalaryStructureSerializer(serializers.ModelSerializer):
     class Meta:
         model = SalaryStructure
         fields = '__all__'
+
+class SalaryComponentInputSerializer(serializers.Serializer):
+    component = serializers.PrimaryKeyRelatedField(queryset=SalaryComponent.objects.all())
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    is_percentage = serializers.BooleanField()
+
+class SalaryStructureBulkCreateSerializer(serializers.Serializer):
+    position = serializers.PrimaryKeyRelatedField(queryset=SalaryStructure._meta.get_field('position').related_model.objects.all())
+    components = SalaryComponentInputSerializer(many=True)
+
+    def create(self, validated_data):
+        position = validated_data['position']
+        components = validated_data['components']
+        instances = []
+
+        for comp in components:
+            instances.append(SalaryStructure(
+                position=position,
+                component=comp['component'],
+                amount=comp['amount'],
+                is_percentage=comp['is_percentage']
+            ))
+
+        return SalaryStructure.objects.bulk_create(instances)
 
 class GeneratePayrollSerializer(serializers.Serializer):
     employee_id = serializers.IntegerField()
