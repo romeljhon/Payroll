@@ -576,9 +576,9 @@ export async function AddTimekeeping(body: any) {
     // surface backend validation messages
     throw new Error(
       data.detail ||
-        data.error ||
-        JSON.stringify(data) ||
-        "Failed to create timekeeping"
+      data.error ||
+      JSON.stringify(data) ||
+      "Failed to create timekeeping"
     );
   }
   return data; // created record
@@ -634,9 +634,9 @@ export async function UpdateTimekeeping(id: string | number, body: any) {
   if (!res.ok) {
     throw new Error(
       data.detail ||
-        data.error ||
-        JSON.stringify(data) ||
-        "Failed to update timekeeping"
+      data.error ||
+      JSON.stringify(data) ||
+      "Failed to update timekeeping"
     );
   }
   return data;
@@ -1012,7 +1012,8 @@ export async function DeleteHolidays(id: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
-  const res = await fetch(`/payroll/api/holidays/${id}/`, {
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL + `/payroll/api/holidays/${id}/`, {
     method: "DELETE",
     headers: {
       Authorization: `Token ${token}`,
@@ -1027,7 +1028,7 @@ export async function UpdateHolidays(id: string, body: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
-  const res = await fetch(`/payroll/api/holidays/${id}/`, {
+  const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + `/payroll/api/holidays/${id}/`, {
     method: "PATCH",
     headers: {
       Authorization: `Token ${token}`,
@@ -1043,4 +1044,29 @@ export async function UpdateHolidays(id: string, body: any) {
   }
 
   return data;
+}
+
+// GENERATE PAYSLIP FOR 1 EMPLOYEE
+export async function SinglePayslip(body: any) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/email/send-single-payslip/",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Token ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body), // ✅ stringify the body here
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to create branch");
+  }
+  return data; // expected to be the created branch
 }

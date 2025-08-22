@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -50,11 +49,10 @@ type HolidayFormValues = z.infer<typeof holidaySchema>;
 /* ------------------------- 2. Component ------------------------- */
 export default function HolidayPage() {
   const { toast } = useToast();
-  const router = useRouter();
   const [holidays, setHolidays] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<any>(null);
 
   const form = useForm<HolidayFormValues>({
     resolver: zodResolver(holidaySchema),
@@ -95,15 +93,22 @@ export default function HolidayPage() {
       if (editingId) {
         // ✅ Update
         await UpdateHolidays(editingId, values);
-        toast({ title: "Holiday Updated", description: `${values.name} updated successfully.` });
+        toast({
+          title: "Holiday Updated",
+          description: `${values.name} updated successfully.`,
+        });
       } else {
         // ✅ Create
         await AddHolidays(values);
-        toast({ title: "Holiday Created", description: `${values.name} added successfully.` });
+        toast({
+          title: "Holiday Created",
+          description: `${values.name} added successfully.`,
+        });
       }
+
       form.reset();
       setEditingId(null);
-      fetchHolidays();
+      await fetchHolidays();
     } catch (err: any) {
       toast({
         variant: "destructive",
@@ -116,11 +121,11 @@ export default function HolidayPage() {
   }
 
   /* ------------------------- Delete ------------------------- */
-  async function handleDelete(id: string) {
+  async function handleDelete(id: number) {
     try {
       await DeleteHolidays(id);
       toast({ title: "Holiday Deleted" });
-      fetchHolidays();
+      await fetchHolidays();
     } catch (err: any) {
       toast({
         variant: "destructive",
@@ -132,7 +137,7 @@ export default function HolidayPage() {
 
   /* ------------------------- Edit ------------------------- */
   function handleEdit(holiday: any) {
-    setEditingId(holiday.id.toString());
+    setEditingId(holiday.id);
     form.reset({
       name: holiday.name,
       date: holiday.date,
@@ -143,9 +148,8 @@ export default function HolidayPage() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
       {/* -------------------- Form -------------------- */}
-      
       <Card className="w-full shadow-xl">
         <CardHeader>
           <CardTitle className="text-2xl text-primary">
@@ -194,7 +198,7 @@ export default function HolidayPage() {
                   <FormItem>
                     <FormLabel>Type</FormLabel>
                     <FormControl>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select type" />
                         </SelectTrigger>
@@ -231,7 +235,10 @@ export default function HolidayPage() {
                 render={({ field }) => (
                   <FormItem className="flex items-center space-x-2">
                     <FormControl>
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={(checked) => field.onChange(!!checked)}
+                      />
                     </FormControl>
                     <FormLabel>Is National?</FormLabel>
                   </FormItem>
@@ -329,6 +336,7 @@ export default function HolidayPage() {
           )}
         </CardContent>
       </Card>
+      
     </div>
   );
 }

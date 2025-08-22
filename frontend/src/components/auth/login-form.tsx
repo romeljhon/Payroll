@@ -29,9 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 
-/* -------------------------------------------------------------------------- */
-/*  1. Zod schema & types                                                     */
-/* -------------------------------------------------------------------------- */
+
 
 const loginFormSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -42,16 +40,13 @@ const loginFormSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginFormSchema>;
 
-/* -------------------------------------------------------------------------- */
-/*  2. API helper (move to /src/ts apis/auth.ts if you wish)                  */
-/* -------------------------------------------------------------------------- */
 async function loginRequest(
   email: string,
   password: string,
 ): Promise<{ token: string }> {
   const res = await fetch(
     `${
-      process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://9fzvx8-8000.csb.app/"
+      process.env.NEXT_PUBLIC_API_BASE_URL 
     }/payroll/accounts/login/`,
     {
       method: "POST",
@@ -68,9 +63,7 @@ async function loginRequest(
   return res.json(); // { token: "...." }
 }
 
-/* -------------------------------------------------------------------------- */
-/*  3. Component                                                               */
-/* -------------------------------------------------------------------------- */
+
 
 export default function LoginForm() {
   const router = useRouter();
