@@ -34,37 +34,7 @@ class SalaryStructure(models.Model):
     def __str__(self):
         value = f"{self.amount}% " if self.is_percentage else f"{self.amount} "
         return f"{self.position.name} - {self.component.name}: {value}"
-
-class PayrollRecord(models.Model):
-    CYCLE_MONTHLY = 'MONTHLY'
-    CYCLE_FIRST_HALF = 'SEMI_1'
-    CYCLE_SECOND_HALF = 'SEMI_2'
-
-    CYCLE_CHOICES = [
-        (CYCLE_MONTHLY, 'Monthly'),
-        (CYCLE_FIRST_HALF, 'Semi-Monthly 1st Half'),
-        (CYCLE_SECOND_HALF, 'Semi-Monthly 2nd Half'),
-    ]
-
-    employee = models.ForeignKey('employees.Employee', on_delete=models.CASCADE)
-    month = models.DateField(help_text="Use the first day of the month")
-    component = models.ForeignKey(SalaryComponent, on_delete=models.CASCADE)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    is_13th_month = models.BooleanField(default=False)
     
-    payroll_cycle = models.CharField(  # ✅ NEW FIELD
-        max_length=10,
-        choices=CYCLE_CHOICES,
-        default=CYCLE_MONTHLY,
-        help_text="Indicates the payroll cycle: full month or split"
-    )
-
-    class Meta:
-        unique_together = ('employee', 'month', 'component', 'payroll_cycle')
-
-    def __str__(self):
-        tag = " (13th)" if self.is_13th_month else f" ({self.payroll_cycle})"
-        return f"{self.employee} - {self.month.strftime('%b %Y')} - {self.component.name}{tag}"
     
 class PayrollCycle(models.Model):
     CYCLE_TYPE_CHOICES = [
@@ -102,6 +72,28 @@ class PayrollCycle(models.Model):
     def __str__(self):
         return f"{self.business.name} - {self.name} ({self.start_day}-{self.end_day})"
     
+
+class PayrollRecord(models.Model):
+    employee = models.ForeignKey('employees.Employee', on_delete=models.CASCADE)
+    month = models.DateField(help_text="Use the first day of the month")
+    component = models.ForeignKey(SalaryComponent, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    is_13th_month = models.BooleanField(default=False)
+    
+    payroll_cycle = models.ForeignKey(PayrollCycle, on_delete=models.PROTECT, related_name="payroll_records")
+
+    run = models.ForeignKey(
+        "PayrollRun", null=True, blank=True, on_delete=models.SET_NULL, related_name="records"
+    )
+
+    class Meta:
+        unique_together = ('employee', 'month', 'component', 'payroll_cycle')
+
+    def __str__(self):
+        tag = " (13th)" if self.is_13th_month else f" ({self.payroll_cycle})"
+        return f"{self.employee} - {self.month.strftime('%b %Y')} - {self.component.name}{tag}"
+    
+    
 class PayrollPolicy(models.Model):
     business = models.OneToOneField(Business, on_delete=models.CASCADE, related_name="payroll_policy")
 
@@ -121,3 +113,34 @@ class PayrollPolicy(models.Model):
 
     def __str__(self):
         return f"PayrollPolicy for {self.business.name}"
+    
+
+class PayrollRun(models.Model):
+    business = models.ForeignKey(
+        Business, on_delete=models.CASCADE, related_name="payroll_runs"
+    )
+    month = models.DateField(help_text="First day of the month being processed")
+    payroll_cycle = models.ForeignKey(PayrollCycle, on_delete=models.PROTECT, related_name="runs")
+
+    status = models.CharField(max_length=20, default="COMPLETED")  # Optional: PENDING, PROCESSING, etc.
+    generated_at = models.DateTimeField(auto_now_add=True)
+
+    notes = models.TextField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ("business", "month", "payroll_cycle")
+
+    def __str__(self):
+        return f"{self.business.name} - {self.payroll_cycle.cycle_type} - {self.month.strftime('%B %Y')}"
+
+class SalaryRate(models.Model):
+    employee = models.ForeignKey("employees.Employee", on_delete=models.CASCADE, related_name="salary_rates")
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)  # null = still active
+
+    class Meta:
+        ordering = ["-start_date"]
+
+    def __str__(self):
+        return f"{self.employee} — ₱{self.amount} from {self.start_date}"

@@ -1,4 +1,3 @@
-# payroll/services/payroll_cycles.py
 from __future__ import annotations
 
 import logging
@@ -20,10 +19,6 @@ def get_dynamic_cutoff(month: date | str, cycle_type: str, business) -> Tuple[da
       If the cycle wraps (e.g., 25→10), end date will be in the *next* month.
     - cycle_type: e.g. 'MONTHLY' | 'SEMI_1' | 'SEMI_2'
     - business: Business instance (must have .id)
-
-    Examples (wrap-aware):
-      - start_day=25, end_day=10, month=2025-01-01  => (2025-01-25, 2025-02-10)
-      - start_day=10, end_day=25, month=2025-01-01  => (2025-01-10, 2025-01-25)
     """
     if isinstance(month, str):
         parsed = parse_date(month)
@@ -50,22 +45,23 @@ def get_dynamic_cutoff(month: date | str, cycle_type: str, business) -> Tuple[da
         logger.error("Matching cycle not found. Available cycles for business %s: %s", business.id, available)
         raise e
 
-    # Clamp start/end days to actual days in that month
+    # Days in the anchor (this) month
     days_in_month = monthrange(month.year, month.month)[1]
-    start_day = max(1, min(int(cycle.start_day), days_in_month))
-    end_day = max(1, min(int(cycle.end_day), days_in_month))
 
-    # Build start in the given month
+    # Clamp start to this month
+    start_day = max(1, min(int(cycle.start_day), days_in_month))
     start = date(month.year, month.month, start_day)
 
-    if start_day <= end_day:
-        # Same-month cutoff (e.g., 10–25)
-        end = date(month.year, month.month, end_day)
+    if int(cycle.end_day) >= int(cycle.start_day):
+        # Same-month cutoff -> clamp to THIS month  ✅ FIX: only clamp here for same-month
+        end_day_this = max(1, min(int(cycle.end_day), days_in_month))
+        end = date(month.year, month.month, end_day_this)
     else:
-        # Wrap-around cutoff (e.g., 25–10): end is in the next month
+        # Wrap-around cutoff -> clamp to NEXT month  ✅ FIX: clamp using next month's length
         next_year = month.year + 1 if month.month == 12 else month.year
         next_month = 1 if month.month == 12 else month.month + 1
         next_month_days = monthrange(next_year, next_month)[1]
-        end = date(next_year, next_month, max(1, min(end_day, next_month_days)))
+        end_day_next = max(1, min(int(cycle.end_day), next_month_days))
+        end = date(next_year, next_month, end_day_next)
 
     return start, end

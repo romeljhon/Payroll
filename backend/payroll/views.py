@@ -7,9 +7,9 @@ from decimal import Decimal, InvalidOperation
 from django.db import transaction
 from payroll.utils import _period_bounds_for_month
 from timekeeping.models import TimeLog
-from .models import PayrollCycle, PayrollPolicy, SalaryComponent, SalaryStructure, PayrollRecord
+from .models import PayrollCycle, PayrollPolicy, PayrollRun, SalaryComponent, SalaryRate, SalaryStructure, PayrollRecord
 from employees.models import Employee
-from .serializers import PayrollPolicySerializer, PayrollRecordSerializer, PayrollSummaryResponseSerializer, SalaryComponentSerializer, SalaryStructureBulkCreateSerializer, SalaryStructureSerializer, GeneratePayrollSerializer, PayrollSummarySerializer, PayslipComponentSerializer, PayrollCycleSerializer
+from .serializers import PayrollPolicySerializer, PayrollRecordSerializer, PayrollRunSerializer, PayrollSummaryResponseSerializer, SalaryComponentSerializer, SalaryRateSerializer, SalaryStructureBulkCreateSerializer, SalaryStructureSerializer, GeneratePayrollSerializer, PayrollSummarySerializer, PayslipComponentSerializer, PayrollCycleSerializer
 from datetime import date
 from django.db.models import Sum, Q
 from drf_spectacular.utils import extend_schema
@@ -64,32 +64,90 @@ def upsert_mandatories(employee, month, cycle_type, gross_monthly: Decimal, poli
             defaults={"amount": amount, "is_13th_month": False},
         )
 
-@extend_schema(tags=["Payroll"])
+@extend_schema(
+    tags=["Payroll"],
+    request={
+        "application/json": {
+            "example": {
+                "employee_id": 123,
+                "month": "2025-08",          # or "2025-08-01"
+                "cycle_type": "SEMI_1",      # defaults to "MONTHLY" if omitted
+                # "run_id": 10               # optional: attach to an existing PayrollRun
+            }
+        }
+    },
+    responses={200: dict}
+)
 class GeneratePayrollView(APIView):
     def post(self, request):
         employee_id = request.data.get("employee_id")
-        base_salary = request.data.get("base_salary")
         month_param = request.data.get("month")
-        cycle_type = request.data.get("cycle_type", "MONTHLY")
+        cycle_type = str(request.data.get("cycle_type", "MONTHLY")).upper()
+        run_id = request.data.get("run_id")
 
-        if not employee_id or not base_salary or not month_param:
-            return Response({"error": "employee_id, base_salary, and month are required."}, status=400)
+        # ✅ Validate required fields (no base_salary anymore)
+        if not employee_id or not month_param:
+            return Response(
+                {"detail": "employee_id and month are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
+        # ✅ Parse month and fetch employee
         try:
-            from payroll.views import normalize_month
             month = normalize_month(month_param)
-            from employees.models import Employee
-            employee = Employee.objects.get(id=employee_id)
-            salary = Decimal(str(base_salary))
+            employee = Employee.objects.select_related("branch__business", "position").get(id=employee_id)
+        except Employee.DoesNotExist:
+            return Response({"detail": "Employee not found."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({"error": str(e)}, status=400)
+            return Response({"detail": f"Invalid request: {e}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ✅ Resolve business & payroll cycle
+        business = getattr(getattr(employee, "branch", None), "business", None)
+        if not business:
+            return Response({"detail": "Employee must belong to a branch with a business."}, status=400)
 
         try:
-            result = generate_payroll_for_employee(employee, salary, month, cycle_type)
-            return Response(result)
+            cycle = PayrollCycle.objects.get(business=business, cycle_type=cycle_type, is_active=True)
+        except PayrollCycle.DoesNotExist:
+            return Response(
+                {"detail": f"No active PayrollCycle for business '{business.name}' and type '{cycle_type}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # ✅ Get or create a PayrollRun (attach records to a run for audit)
+        run = None
+        if run_id:
+            try:
+                run = PayrollRun.objects.get(pk=run_id)
+            except PayrollRun.DoesNotExist:
+                return Response({"detail": "PayrollRun not found."}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            run = PayrollRun.objects.create(
+                business=business,
+                month=month,
+                payroll_cycle=cycle,
+                status="PENDING",
+                notes=f"Single-employee run for {employee_id}",
+            )
+
+        # ✅ Generate payroll using the NEW engine signature (SalaryRate-driven)
+        try:
+            result = generate_payroll_for_employee(
+                employee=employee,
+                month=month,
+                cycle_type=cycle_type,
+                run=run,
+            )
+            run.status = "COMPLETED"
+            run.save(update_fields=["status"])
+            return Response({"run_id": run.id, "result": result}, status=200)
+
         except Exception as e:
-            return Response({"error": str(e)}, status=500)
-    
+            # Common causes: missing SalaryRate for month; missing policy; etc.
+            run.status = "PENDING"  # leave as PENDING for retry/debug
+            run.notes = f"Error: {e}"
+            run.save(update_fields=["status", "notes"])
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 @extend_schema(
     tags=["Payroll"],
     parameters=[
@@ -211,28 +269,129 @@ class PayslipPreviewView(APIView):
 
 @extend_schema(tags=["Payroll"])
 class BatchPayrollGenerationView(APIView):
+    """
+    POST body (preferred):
+    {
+      "employee_ids": [1,2,3],
+      "month": "2025-08",           // or "2025-08-01"
+      "cycle_type": "SEMI_1",       // or legacy: "payroll_cycle"
+      // "run_id": 10                // optional: attach to existing run
+    }
+
+    Legacy payload supported (treated as overrides):
+    {
+      "base_salaries": { "1": "25000.00", "2": "30000.00" },
+      "month": "2025-08",
+      "cycle_type": "MONTHLY"
+    }
+    """
     def post(self, request):
+        # 1) Parse month
         month_param = request.data.get("month")
-        base_salaries = request.data.get("base_salaries")  # { employee_id: base_salary }
-        cycle_type = request.data.get("payroll_cycle", "MONTHLY")
-
-        if not month_param or not base_salaries:
-            return Response({"error": "month and base_salaries are required."}, status=400)
-
+        if not month_param:
+            return Response({"detail": "month is required"}, status=400)
         try:
-            from payroll.views import normalize_month
             month = normalize_month(month_param)
         except Exception as e:
-            return Response({"error": str(e)}, status=400)
+            return Response({"detail": f"Invalid month: {e}"}, status=400)
 
-        results = generate_batch_payroll(base_salaries, month, cycle_type)
+        # 2) Cycle type (accept legacy key)
+        cycle_type = str(
+            request.data.get("cycle_type") or request.data.get("payroll_cycle") or "MONTHLY"
+        ).upper()
 
-        return Response({
-            "month": month,
-            "payroll_cycle": cycle_type,
-            "processed": len(results),
-            "results": results
-        })
+        # 3) Employees: prefer employee_ids, else derive from base_salaries keys
+        employee_ids = request.data.get("employee_ids")
+        base_salaries = request.data.get("base_salaries")  # legacy
+
+        if not employee_ids and not base_salaries:
+            return Response(
+                {"detail": "Provide either employee_ids or base_salaries"},
+                status=400,
+            )
+
+        if not employee_ids and base_salaries:
+            try:
+                # normalize keys to ints
+                employee_ids = [int(k) for k in base_salaries.keys()]
+            except Exception:
+                return Response({"detail": "base_salaries keys must be employee IDs"}, status=400)
+
+        # Optional overrides from legacy base_salaries (for simulation); values left as-is
+        salary_overrides = None
+        if base_salaries:
+            try:
+                salary_overrides = {int(k): base_salaries[k] for k in base_salaries}
+            except Exception:
+                return Response({"detail": "Invalid base_salaries mapping"}, status=400)
+
+        # 4) Build/resolve PayrollRun (so you always get run_id)
+        #    Assumes single business (your current scope). Uses first employee to resolve business.
+        run = None
+        run_id = request.data.get("run_id")
+        if run_id:
+            try:
+                run = PayrollRun.objects.get(pk=run_id)
+            except PayrollRun.DoesNotExist:
+                return Response({"detail": "PayrollRun not found."}, status=404)
+        else:
+            # Infer business from first employee
+            try:
+                first_emp = (
+                    Employee.objects.select_related("branch__business")
+                    .only("id", "branch__business_id")
+                    .get(id=employee_ids[0])
+                )
+                business = first_emp.branch.business
+            except Employee.DoesNotExist:
+                return Response({"detail": "First employee not found"}, status=404)
+            except Exception as e:
+                return Response({"detail": str(e)}, status=400)
+
+            try:
+                cycle = PayrollCycle.objects.get(business=business, cycle_type=cycle_type, is_active=True)
+            except PayrollCycle.DoesNotExist:
+                return Response(
+                    {"detail": f"No active PayrollCycle for business '{business.name}' and type '{cycle_type}'."},
+                    status=400,
+                )
+
+            run = PayrollRun.objects.create(
+                business=business,
+                month=month,
+                payroll_cycle=cycle,
+                status="PENDING",
+                notes=f"Batch run for {len(employee_ids)} employees",
+            )
+
+        # 5) Call the NEW engine (SalaryRate-driven)
+        try:
+            results = generate_batch_payroll(
+                month=month,
+                cycle_type=cycle_type,
+                employee_ids=employee_ids,
+                salary_overrides=salary_overrides,  # optional
+                run=run,
+            )
+            run.status = "COMPLETED"
+            run.save(update_fields=["status"])
+
+            return Response(
+                {
+                    "run_id": run.id,
+                    "month": month.isoformat(),
+                    "cycle_type": cycle_type,
+                    "processed": len(results),
+                    "results": results,
+                },
+                status=200,
+            )
+        except Exception as e:
+            run.status = "PENDING"
+            run.notes = f"Error: {e}"
+            run.save(update_fields=["status", "notes"])
+            return Response({"detail": str(e)}, status=400)
+        
 @extend_schema(tags=["Payroll"])    
 class PayrollCycleViewSet(viewsets.ModelViewSet):
     """
@@ -335,3 +494,66 @@ class PayrollPolicyViewSet(viewsets.ModelViewSet):
 class PayrollRecordViewSet(viewsets.ModelViewSet):
     queryset = PayrollRecord.objects.all()
     serializer_class = PayrollRecordSerializer
+
+@extend_schema(tags=["Payroll"])
+class SalaryRateViewSet(viewsets.ModelViewSet):
+    queryset = SalaryRate.objects.select_related("employee").all()
+    serializer_class = SalaryRateSerializer
+
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
+    search_fields = ["employee__first_name", "employee__last_name"]
+    ordering_fields = ["start_date", "amount"]
+    ordering = ["-start_date"]
+    filterset_fields = ["employee", "start_date", "end_date"]
+
+@extend_schema(tags=["Payroll"])
+class PayrollRunViewSet(viewsets.ModelViewSet):
+    queryset = PayrollRun.objects.select_related("business", "payroll_cycle").all()
+    serializer_class = PayrollRunSerializer
+
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
+    search_fields = ["business__name", "payroll_cycle__name", "payroll_cycle__cycle_type", "notes"]
+    ordering_fields = ["generated_at", "month", "id"]
+    ordering = ["-generated_at"]
+    filterset_fields = ["business", "month", "payroll_cycle", "status"]
+
+    def perform_create(self, serializer):
+        # Default new runs to PENDING (you can flip to COMPLETED after generation)
+        serializer.save(status=serializer.validated_data.get("status", "PENDING"))
+
+    @action(detail=True, methods=["get"])
+    def summary(self, request, pk=None):
+        """
+        Quick totals for a run: earnings, deductions, net, and record count.
+        """
+        run = self.get_object()
+        records = PayrollRecord.objects.select_related("component").filter(run=run)
+
+        total_earnings = Decimal("0.00")
+        total_deductions = Decimal("0.00")
+
+        for r in records:
+            if r.component.component_type == "EARNING":
+                total_earnings += r.amount
+            else:
+                total_deductions += r.amount
+
+        data = {
+            "run_id": run.id,
+            "business": run.business.name,
+            "month": run.month.isoformat(),
+            "cycle": {
+                "id": run.payroll_cycle_id,
+                "name": run.payroll_cycle.name,
+                "type": run.payroll_cycle.cycle_type,
+            },
+            "counts": {
+                "records": records.count(),
+            },
+            "totals": {
+                "earnings": str(total_earnings),
+                "deductions": str(total_deductions),
+                "net": str(total_earnings - total_deductions),
+            },
+        }
+        return Response(data)

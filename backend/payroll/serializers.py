@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import PayrollPolicy, SalaryComponent, SalaryStructure, PayrollRecord, PayrollCycle
+from .models import PayrollPolicy, PayrollRun, SalaryComponent, SalaryRate, SalaryStructure, PayrollRecord, PayrollCycle
 
 
 class SalaryComponentSerializer(serializers.ModelSerializer):
@@ -133,3 +133,68 @@ class PayrollRecordSerializer(serializers.ModelSerializer):
             'is_13th_month',
             'payroll_cycle',
         ]
+
+class SalaryRateSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(source="employee.__str__", read_only=True)
+
+    class Meta:
+        model = SalaryRate
+        fields = [
+            "id",
+            "employee",
+            "employee_name",
+            "amount",
+            "start_date",
+            "end_date"
+        ]
+
+    def validate(self, attrs):
+        start = attrs.get("start_date", getattr(self.instance, "start_date", None))
+        end = attrs.get("end_date", getattr(self.instance, "end_date", None))
+
+        if start and end and start > end:
+            raise serializers.ValidationError("End date must be after start date.")
+
+        return attrs
+    
+class PayrollRunSerializer(serializers.ModelSerializer):
+    business_name = serializers.CharField(source="business.name", read_only=True)
+    cycle_name = serializers.CharField(source="payroll_cycle.name", read_only=True)
+    cycle_type = serializers.CharField(source="payroll_cycle.cycle_type", read_only=True)
+    records_count = serializers.IntegerField(source="records.count", read_only=True)
+
+    class Meta:
+        model = PayrollRun
+        fields = [
+            "id",
+            "business",
+            "business_name",
+            "month",
+            "payroll_cycle",
+            "cycle_name",
+            "cycle_type",
+            "status",
+            "generated_at",
+            "notes",
+            "records_count",
+        ]
+
+    def validate(self, attrs):
+        """
+        Prevent duplicate runs for same (business, month, payroll_cycle).
+        DB unique_together will also enforce this, but this gives a nicer error.
+        """
+        instance = getattr(self, "instance", None)
+        business = attrs.get("business", getattr(instance, "business", None))
+        month = attrs.get("month", getattr(instance, "month", None))
+        payroll_cycle = attrs.get("payroll_cycle", getattr(instance, "payroll_cycle", None))
+
+        if business and month and payroll_cycle:
+            qs = PayrollRun.objects.filter(business=business, month=month, payroll_cycle=payroll_cycle)
+            if instance:
+                qs = qs.exclude(pk=instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError(
+                    {"non_field_errors": ["A payroll run already exists for this business, month, and cycle."]}
+                )
+        return attrs
