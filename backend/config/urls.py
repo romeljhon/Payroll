@@ -17,8 +17,6 @@ urlpatterns = [
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 
     # 🔧 Your actual app routes
-    path('payroll/accounts/', include('accounts.urls')),
-    path('payroll/api/', include('config.api_urls')),
-    # path('payroll/', include('payroll.urls')),
-    # path('api/', include('payroll.urls')),
+    path('accounts/', include('accounts.urls')),
+    path('api/', include('config.api_urls')),
 ]
