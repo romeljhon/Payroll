@@ -1,16 +1,41 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Edit, Trash2, Layers } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { getSalaryComponent } from "@/lib/api";
+import {
+  getSalaryComponent,
+  AddSalaryComponent,
+  DeleteSalaryComponent,
+  UpdateSalaryComponent,
+} from "@/lib/api";
 
 interface SalaryComponent {
   id: number;
@@ -22,13 +47,14 @@ interface SalaryComponent {
 
 export default function SalaryComponentPage() {
   const [components, setComponents] = useState<SalaryComponent[]>([]);
+  const [editComponent, setEditComponent] = useState<SalaryComponent | null>(null);
   const { toast } = useToast();
 
+  // ✅ Fetch salary components
   useEffect(() => {
     async function fetchComponents() {
       try {
         const data = await getSalaryComponent();
-        // map API fields to UI state
         const mapped = data.map((item: any) => ({
           id: item.id,
           name: item.name,
@@ -48,27 +74,93 @@ export default function SalaryComponentPage() {
     fetchComponents();
   }, [toast]);
 
-  const handleAddComponent = (event: React.FormEvent<HTMLFormElement>) => {
+  // ✅ Add component
+  const handleAddComponent = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const newComponent: SalaryComponent = {
-      id: Date.now(), // temporary ID
+
+    const newComponent = {
       name: formData.get("name") as string,
       code: formData.get("code") as string,
-      type: formData.get("type") as "Earning" | "Deduction",
-      isTaxable: formData.get("isTaxable") === "on",
+      component_type: formData.get("type") === "Earning" ? "EARNING" : "DEDUCTION",
+      is_taxable: formData.get("isTaxable") === "on",
     };
-    if (!newComponent.name || !newComponent.code || !newComponent.type) {
+
+    try {
+      const created = await AddSalaryComponent(newComponent);
+      setComponents([
+        {
+          id: created.id,
+          name: created.name,
+          code: created.code,
+          type: created.component_type === "EARNING" ? "Earning" : "Deduction",
+          isTaxable: created.is_taxable,
+        },
+        ...components,
+      ]);
+      toast({ title: "Success", description: "New salary component has been added." });
+      event.currentTarget.reset();
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Please fill all required fields.",
+        description: error.message || "Failed to add component",
       });
-      return;
     }
-    setComponents([newComponent, ...components]);
-    toast({ title: "Success", description: "New salary component has been added." });
-    event.currentTarget.reset();
+  };
+
+  // ✅ Delete component
+  const handleDelete = async (id: number) => {
+    try {
+      await DeleteSalaryComponent(id);
+      setComponents(components.filter((c) => c.id !== id));
+      toast({ title: "Deleted", description: "Component removed successfully." });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to delete component",
+      });
+    }
+  };
+
+  // ✅ Update component
+  const handleUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editComponent) return;
+
+    const formData = new FormData(event.currentTarget);
+    const updated = {
+      name: formData.get("name") as string,
+      code: formData.get("code") as string,
+      component_type: formData.get("type") === "Earning" ? "EARNING" : "DEDUCTION",
+      is_taxable: formData.get("isTaxable") === "on",
+    };
+
+    try {
+      const result = await UpdateSalaryComponent(editComponent.id, updated);
+      setComponents(
+        components.map((c) =>
+          c.id === editComponent.id
+            ? {
+                ...c,
+                name: result.name,
+                code: result.code,
+                type: result.component_type === "EARNING" ? "Earning" : "Deduction",
+                isTaxable: result.is_taxable,
+              }
+            : c
+        )
+      );
+      setEditComponent(null);
+      toast({ title: "Updated", description: "Component updated successfully." });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update component",
+      });
+    }
   };
 
   return (
@@ -105,9 +197,7 @@ export default function SalaryComponentPage() {
             </div>
             <div className="flex items-center space-x-2 md:pt-8">
               <Checkbox id="isTaxable" name="isTaxable" />
-              <Label htmlFor="isTaxable" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                Is taxable
-              </Label>
+              <Label htmlFor="isTaxable">Is taxable</Label>
             </div>
             <div className="md:col-span-2 flex flex-wrap gap-2 pt-4 border-t">
               <Button type="submit" className="bg-primary hover:bg-primary/90">
@@ -143,7 +233,9 @@ export default function SalaryComponentPage() {
                   <TableCell>
                     <span
                       className={`px-2 py-1 text-xs rounded-full ${
-                        component.type === "Earning" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                        component.type === "Earning"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
                       }`}
                     >
                       {component.type}
@@ -151,13 +243,21 @@ export default function SalaryComponentPage() {
                   </TableCell>
                   <TableCell>{component.isTaxable ? "Yes" : "No"}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="hover:text-accent mr-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="hover:text-accent mr-2"
+                      onClick={() => setEditComponent(component)}
+                    >
                       <Edit className="h-4 w-4" />
-                      <span className="sr-only">Edit</span>
                     </Button>
-                    <Button variant="ghost" size="icon" className="hover:text-destructive">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="hover:text-destructive"
+                      onClick={() => handleDelete(component.id)}
+                    >
                       <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Delete</span>
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -173,6 +273,53 @@ export default function SalaryComponentPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editComponent} onOpenChange={() => setEditComponent(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Salary Component</DialogTitle>
+          </DialogHeader>
+          {editComponent && (
+            <form onSubmit={handleUpdate} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input id="name" name="name" defaultValue={editComponent.name} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="code">Code</Label>
+                <Input id="code" name="code" defaultValue={editComponent.code} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="type">Component Type</Label>
+                <Select name="type" defaultValue={editComponent.type}>
+                  <SelectTrigger id="type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Earning">Earning</SelectItem>
+                    <SelectItem value="Deduction">Deduction</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isTaxable"
+                  name="isTaxable"
+                  defaultChecked={editComponent.isTaxable}
+                />
+                <Label htmlFor="isTaxable">Is taxable</Label>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={() => setEditComponent(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit">Update</Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

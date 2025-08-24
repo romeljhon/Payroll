@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { GitMerge, Edit, Trash2, Check, X } from "lucide-react";
+import { GitMerge, Edit, Trash2, Check, X, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -52,7 +52,9 @@ export default function SalaryStructurePage() {
 
   // add form state
   const [selectedPositionId, setSelectedPositionId] = useState<string>("");
-  const [selectedComponentId, setSelectedComponentId] = useState<string>("");
+  const [componentForms, setComponentForms] = useState<
+    { componentId: string; amount: string; isPercentage: boolean }[]
+  >([{ componentId: "", amount: "", isPercentage: false }]);
 
   // edit state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -78,9 +80,9 @@ export default function SalaryStructurePage() {
         setLoading(true);
 
         const [apiComponents, apiPositions, apiStructures] = await Promise.all([
-          getSalaryComponent(), // returns: id, name, code, component_type, is_taxable
-          getPositions(),       // returns: id, name
-          getSalaryStructure(), // returns: id, position, component, amount, is_percentage  (IDs likely)
+          getSalaryComponent(),
+          getPositions(),
+          getSalaryStructure(),
         ]);
 
         const mappedComponents: SalaryComponentUI[] = (apiComponents ?? []).map((c: any) => ({
@@ -96,7 +98,6 @@ export default function SalaryStructurePage() {
 
         const mappedStructures: SalaryStructureUI[] = (apiStructures ?? []).map((s: any) => ({
           id: String(s.id),
-          // assume `position` and `component` are IDs from backend
           positionId: String(s.position),
           componentId: String(s.component),
           amount: Number(s.amount ?? 0),
@@ -121,53 +122,52 @@ export default function SalaryStructurePage() {
   /* ------------------------------- add ------------------------------- */
   const handleAddSalaryStructure = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const amountStr = String(formData.get("amount") ?? "").trim();
-    const isPercentage = formData.get("isPercentage") === "on";
 
-    if (!selectedPositionId || !selectedComponentId || !amountStr) {
-      toast({ variant: "destructive", title: "Error", description: "Please fill all fields." });
+    if (!selectedPositionId) {
+      toast({ variant: "destructive", title: "Error", description: "Please select a position." });
       return;
     }
 
-    const amount = parseFloat(amountStr);
-    if (Number.isNaN(amount)) {
-      toast({ variant: "destructive", title: "Invalid amount", description: "Please enter a valid number." });
+    const validComponents = componentForms.filter((cf) => cf.componentId && cf.amount);
+    if (validComponents.length === 0) {
+      toast({ variant: "destructive", title: "Error", description: "Please add at least one component with amount." });
       return;
     }
 
     try {
       setLoading(true);
-      // Backend field names assumed as below — adjust if your serializer differs.
+
       const body = {
         position: Number(selectedPositionId),
-        component: Number(selectedComponentId),
-        amount,
-        is_percentage: isPercentage,
+        components: validComponents.map((cf) => ({
+          component: Number(cf.componentId),
+          amount: cf.amount,
+          is_percentage: cf.isPercentage,
+        })),
       };
+
       const created = await AddSalaryStructure(body);
 
-      // merge into UI list
-      setSalaryStructures((prev) => [
-        ...prev,
-        {
-          id: String(created.id),
-          positionId: String(created.position),
-          componentId: String(created.component),
-          amount: Number(created.amount ?? amount),
-          isPercentage: Boolean(created.is_percentage ?? isPercentage),
-        },
-      ]);
+      // merge into UI list (flatten components for table)
+      const newStructures: SalaryStructureUI[] = body.components.map((c, idx) => ({
+        id: `${created.id}-${idx}`,
+        positionId: String(body.position),
+        componentId: String(c.component),
+        amount: Number(c.amount),
+        isPercentage: Boolean(c.is_percentage),
+      }));
+
+      setSalaryStructures((prev) => [...prev, ...newStructures]);
 
       toast({
         title: "Created",
-        description: `Added for ${positionNameById.get(selectedPositionId) ?? "position"}.`,
+        description: `Added ${newStructures.length} component(s) for ${positionNameById.get(selectedPositionId) ?? "position"}.`,
       });
 
       // reset
       (event.target as HTMLFormElement).reset();
       setSelectedPositionId("");
-      setSelectedComponentId("");
+      setComponentForms([{ componentId: "", amount: "", isPercentage: false }]);
     } catch (err: any) {
       toast({
         variant: "destructive",
@@ -177,6 +177,14 @@ export default function SalaryStructurePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const addComponentField = () => {
+    setComponentForms((prev) => [...prev, { componentId: "", amount: "", isPercentage: false }]);
+  };
+
+  const removeComponentField = (index: number) => {
+    setComponentForms((prev) => prev.filter((_, i) => i !== index));
   };
 
   /* ------------------------------ delete ----------------------------- */
@@ -293,35 +301,70 @@ export default function SalaryStructurePage() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="component">Component:</Label>
-              <Select
-                value={selectedComponentId}
-                onValueChange={setSelectedComponentId}
-                disabled={loading || components.length === 0}
-              >
-                <SelectTrigger id="component">
-                  <SelectValue placeholder={loading ? "Loading..." : components.length ? "Select component" : "No components found"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {components.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {componentForms.map((cf, idx) => (
+              <div key={idx} className="p-4 border rounded-md space-y-4 relative">
+                <div className="space-y-2">
+                  <Label>Component:</Label>
+                  <Select
+                    value={cf.componentId}
+                    onValueChange={(v) =>
+                      setComponentForms((prev) => prev.map((item, i) => (i === idx ? { ...item, componentId: v } : item)))
+                    }
+                    disabled={loading || components.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={loading ? "Loading..." : components.length ? "Select component" : "No components found"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {components.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="amount">Amount:</Label>
-              <Input id="amount" name="amount" type="number" step="any" placeholder="Enter amount" required />
-            </div>
+                <div className="space-y-2">
+                  <Label>Amount:</Label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={cf.amount}
+                    onChange={(e) =>
+                      setComponentForms((prev) => prev.map((item, i) => (i === idx ? { ...item, amount: e.target.value } : item)))
+                    }
+                    placeholder="Enter amount"
+                  />
+                </div>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox id="isPercentage" name="isPercentage" />
-              <Label htmlFor="isPercentage">Is percentage</Label>
-            </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    checked={cf.isPercentage}
+                    onCheckedChange={(v) =>
+                      setComponentForms((prev) => prev.map((item, i) => (i === idx ? { ...item, isPercentage: Boolean(v) } : item)))
+                    }
+                  />
+                  <Label>Is percentage</Label>
+                </div>
+
+                {componentForms.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 text-red-600"
+                    onClick={() => removeComponentField(idx)}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+
+            <Button type="button" variant="outline" onClick={addComponentField} className="flex items-center">
+              <Plus className="mr-2 h-4 w-4" /> Add Component
+            </Button>
 
             <div className="flex justify-end">
               <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={loading}>

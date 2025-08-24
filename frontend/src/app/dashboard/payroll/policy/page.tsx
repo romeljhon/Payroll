@@ -1,77 +1,116 @@
-'use client';
+"use client";
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import * as z from 'zod';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import {
-  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import { toast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useEffect, useState, useCallback } from 'react';
-import { AddPolicy, getBusiness, getPolicys } from '@/lib/api';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useEffect, useState, useCallback } from "react";
+import {
+  AddPolicy,
+  getBusiness,
+  getPolicys,
+  UpdatePolicy,
+  DeletePolicy,
+} from "@/lib/api";
 
-/* ----------------------------- Helpers ----------------------------- */
+/* ---------------- helpers ---------------- */
 const maxDigitsBefore = (n: number, max: number) => {
   const s = String(n);
-  const [intPart] = s.split('.');
-  const digits = intPart.replace(/^[-+]/, '');
+  const [intPart] = s.split(".");
+  const digits = intPart.replace(/^[-+]/, "");
   return digits.length <= max;
 };
 const twoDecimalPlaces = (n: number) => Number.isInteger(Math.round(n * 100));
-const toMoney = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : '0.00');
+const toMoney = (n: number) =>
+  Number.isFinite(n) ? n.toFixed(2) : "0.00";
 
-/* ------------------------------ Schema ----------------------------- */
+/* ---------------- schema ---------------- */
 const formSchema = z.object({
-  business: z.string({ required_error: 'Please select a business.' }).min(1, 'Please select a business.'),
-  graceMinutes: z.coerce.number().min(0, { message: 'Grace minutes cannot be negative.' })
-    .refine(n => maxDigitsBefore(n, 3), { message: 'Ensure that there are no more than 3 digits before the decimal point.' }),
-  standardWorkingDays: z.coerce.number().min(0, { message: 'Standard working days cannot be negative.' })
-    .refine(n => maxDigitsBefore(n, 3), { message: 'Ensure that there are no more than 3 digits before the decimal point.' }),
-  latePenaltyPerMinute: z.coerce.number().min(0)
-    .refine(n => maxDigitsBefore(n, 3), { message: 'Ensure that there are no more than 3 digits before the decimal point.' })
-    .refine(twoDecimalPlaces, { message: 'Must have at most 2 decimal places.' }),
-  undertimePenaltyPerMinute: z.coerce.number().min(0)
-    .refine(n => maxDigitsBefore(n, 3), { message: 'Ensure that there are no more than 3 digits before the decimal point.' })
-    .refine(twoDecimalPlaces, { message: 'Must have at most 2 decimal places.' }),
-  absentPenaltyPerDay: z.coerce.number().min(0)
-    .refine(n => maxDigitsBefore(n, 5), { message: 'Ensure that there are no more than 5 digits before the decimal point.' })
-    .refine(twoDecimalPlaces, { message: 'Must have at most 2 decimal places.' }),
-
-  // Multipliers: ≤ 2 digits before decimal, 2 decimals max
-  otMultiplier: z.coerce.number().min(0)
-    .refine(n => maxDigitsBefore(n, 2), { message: 'Ensure that there are no more than 2 digits before the decimal point.' })
-    .refine(twoDecimalPlaces, { message: 'Must have at most 2 decimal places.' }),
-  restDayMultiplier: z.coerce.number().min(0)
-    .refine(n => maxDigitsBefore(n, 2), { message: 'Ensure that there are no more than 2 digits before the decimal point.' })
-    .refine(twoDecimalPlaces, { message: 'Must have at most 2 decimal places.' }),
-  holidayRegularMultiplier: z.coerce.number().min(0)
-    .refine(n => maxDigitsBefore(n, 2), { message: 'Ensure that there are no more than 2 digits before the decimal point.' })
-    .refine(twoDecimalPlaces, { message: 'Must have at most 2 decimal places.' }),
-  holidaySpecialMultiplier: z.coerce.number().min(0)
-    .refine(n => maxDigitsBefore(n, 2), { message: 'Ensure that there are no more than 2 digits before the decimal point.' })
-    .refine(twoDecimalPlaces, { message: 'Must have at most 2 decimal places.' }),
+  business: z
+    .string({ required_error: "Please select a business." })
+    .min(1, "Please select a business."),
+  graceMinutes: z.coerce
+    .number()
+    .min(0, { message: "Grace minutes cannot be negative." })
+    .refine((n) => maxDigitsBefore(n, 3)),
+  standardWorkingDays: z.coerce
+    .number()
+    .min(0)
+    .refine((n) => maxDigitsBefore(n, 3)),
+  latePenaltyPerMinute: z.coerce
+    .number()
+    .min(0)
+    .refine((n) => maxDigitsBefore(n, 3))
+    .refine(twoDecimalPlaces),
+  undertimePenaltyPerMinute: z.coerce
+    .number()
+    .min(0)
+    .refine((n) => maxDigitsBefore(n, 3))
+    .refine(twoDecimalPlaces),
+  absentPenaltyPerDay: z.coerce
+    .number()
+    .min(0)
+    .refine((n) => maxDigitsBefore(n, 5))
+    .refine(twoDecimalPlaces),
+  otMultiplier: z.coerce
+    .number()
+    .min(0)
+    .refine((n) => maxDigitsBefore(n, 2))
+    .refine(twoDecimalPlaces),
+  restDayMultiplier: z.coerce
+    .number()
+    .min(0)
+    .refine((n) => maxDigitsBefore(n, 2))
+    .refine(twoDecimalPlaces),
+  holidayRegularMultiplier: z.coerce
+    .number()
+    .min(0)
+    .refine((n) => maxDigitsBefore(n, 2))
+    .refine(twoDecimalPlaces),
+  holidaySpecialMultiplier: z.coerce
+    .number()
+    .min(0)
+    .refine((n) => maxDigitsBefore(n, 2))
+    .refine(twoDecimalPlaces),
 });
 
 type PayrollPolicyFormValues = z.infer<typeof formSchema>;
-
 interface Business {
   id: string | number;
   name: string;
 }
 
-/* ------------------------------ Page ------------------------------- */
+/* ---------------- page ---------------- */
 export default function AddPayrollPolicyPage() {
   const form = useForm<PayrollPolicyFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      business: '',
+      business: "",
       graceMinutes: 0,
       standardWorkingDays: 0,
       latePenaltyPerMinute: 0,
@@ -90,48 +129,33 @@ export default function AddPayrollPolicyPage() {
   const [policyList, setPolicyList] = useState<any[]>([]);
   const [loadingPolicies, setLoadingPolicies] = useState(true);
 
+  const [editId, setEditId] = useState<number | null>(null);
+
   const reloadPolicies = useCallback(async () => {
     try {
       const data = await getPolicys();
       setPolicyList(Array.isArray(data) ? data : []);
     } catch (error: any) {
       toast({
-        title: 'Error fetching policies',
-        description: error?.message || 'Failed to load policies',
-        variant: 'destructive',
+        title: "Error fetching policies",
+        description: error?.message || "Failed to load policies",
+        variant: "destructive",
       });
     } finally {
       setLoadingPolicies(false);
     }
   }, []);
 
-  // Submit
+  // submit add / update
   async function onSubmit(values: PayrollPolicyFormValues) {
     setSubmitting(true);
     try {
       const selectedBizId = Number(values.business);
 
-      // Prevent duplicates (client-side), still enforced by DRF server-side
-      const exists =
-        policyList.some(p =>
-          // try to match by id if available
-          Number(p.business ?? p.business_id) === selectedBizId
-          // or fallback to name match if API doesn't include raw id
-          || String(p.business_name)?.toLowerCase() ===
-             (businessList.find(b => Number(b.id) === selectedBizId)?.name ?? '').toLowerCase()
-        );
-
-      if (exists) {
-        form.setError('business', { message: 'Payroll policy with this business already exists.' });
-        setSubmitting(false);
-        return;
-      }
-
-      // Payload — stringifying decimals avoids float precision issues with DecimalField
       const payload = {
         business: selectedBizId,
-        grace_minutes: values.graceMinutes, // integer ok
-        standard_working_days: values.standardWorkingDays, // integer/decimal ok
+        grace_minutes: values.graceMinutes,
+        standard_working_days: values.standardWorkingDays,
         late_penalty_per_minute: toMoney(values.latePenaltyPerMinute),
         undertime_penalty_per_minute: toMoney(values.undertimePenaltyPerMinute),
         absent_penalty_per_day: toMoney(values.absentPenaltyPerDay),
@@ -141,72 +165,58 @@ export default function AddPayrollPolicyPage() {
         holiday_special_multiplier: toMoney(values.holidaySpecialMultiplier),
       };
 
-      await AddPolicy(payload);
+      if (editId) {
+        await UpdatePolicy(String(editId), payload);
+        toast({ title: "Policy Updated", description: "Policy successfully updated." });
+        setEditId(null);
+      } else {
+        await AddPolicy(payload);
+        toast({ title: "Policy Added", description: "Policy successfully created." });
+      }
 
-      toast({
-        title: 'Policy Added',
-        description: 'The payroll policy was successfully created.',
-      });
-
-      form.reset({
-        business: '',
-        graceMinutes: 0,
-        standardWorkingDays: 0,
-        latePenaltyPerMinute: 0,
-        undertimePenaltyPerMinute: 0,
-        absentPenaltyPerDay: 0,
-        otMultiplier: 0,
-        restDayMultiplier: 0,
-        holidayRegularMultiplier: 0,
-        holidaySpecialMultiplier: 0,
-      });
-
+      form.reset();
       await reloadPolicies();
     } catch (e: any) {
-      // Try to parse DRF error JSON and map to fields
-      let payload: any = null;
-      try {
-        payload = JSON.parse(e.message);
-      } catch {
-        /* not JSON */
-      }
-
-      if (payload && typeof payload === 'object') {
-        const map: Record<string, keyof PayrollPolicyFormValues> = {
-          business: 'business',
-          grace_minutes: 'graceMinutes',
-          standard_working_days: 'standardWorkingDays',
-          late_penalty_per_minute: 'latePenaltyPerMinute',
-          undertime_penalty_per_minute: 'undertimePenaltyPerMinute',
-          absent_penalty_per_day: 'absentPenaltyPerDay',
-          ot_multiplier: 'otMultiplier',
-          rest_day_multiplier: 'restDayMultiplier',
-          holiday_regular_multiplier: 'holidayRegularMultiplier',
-          holiday_special_multiplier: 'holidaySpecialMultiplier',
-        };
-
-        let anyFieldMapped = false;
-        Object.entries(payload).forEach(([key, val]) => {
-          const msg = Array.isArray(val) ? String(val[0]) : String(val);
-          const fieldName = map[key];
-          if (fieldName) {
-            form.setError(fieldName, { message: msg });
-            anyFieldMapped = true;
-          }
-        });
-
-        if (!anyFieldMapped) {
-          toast({ title: 'Error adding policy', description: e.message, variant: 'destructive' });
-        }
-      } else {
-        toast({ title: 'Error adding policy', description: e?.message || 'Something went wrong.', variant: 'destructive' });
-      }
+      toast({
+        title: "Error",
+        description: e?.message || "Something went wrong.",
+        variant: "destructive",
+      });
     } finally {
       setSubmitting(false);
     }
   }
 
-  // Load businesses
+  // delete handler
+  async function handleDelete(id: number) {
+    if (!confirm("Are you sure you want to delete this policy?")) return;
+    try {
+      await DeletePolicy(id);
+      toast({ title: "Policy Deleted", description: "Policy successfully deleted." });
+      await reloadPolicies();
+    } catch (e: any) {
+      toast({ title: "Error deleting policy", description: e?.message, variant: "destructive" });
+    }
+  }
+
+  // edit handler
+  function handleEdit(policy: any) {
+    setEditId(policy.id);
+    form.reset({
+      business: String(policy.business),
+      graceMinutes: policy.grace_minutes,
+      standardWorkingDays: policy.standard_working_days,
+      latePenaltyPerMinute: policy.late_penalty_per_minute,
+      undertimePenaltyPerMinute: policy.undertime_penalty_per_minute,
+      absentPenaltyPerDay: policy.absent_penalty_per_day,
+      otMultiplier: policy.ot_multiplier,
+      restDayMultiplier: policy.rest_day_multiplier,
+      holidayRegularMultiplier: policy.holiday_regular_multiplier,
+      holidaySpecialMultiplier: policy.holiday_special_multiplier,
+    });
+  }
+
+  /* load business + policies */
   useEffect(() => {
     (async () => {
       try {
@@ -214,9 +224,9 @@ export default function AddPayrollPolicyPage() {
         setBusinessList(Array.isArray(data) ? data : []);
       } catch (error: any) {
         toast({
-          title: 'Error fetching businesses',
-          description: error?.message || 'Failed to load business list',
-          variant: 'destructive',
+          title: "Error fetching businesses",
+          description: error?.message || "Failed to load business list",
+          variant: "destructive",
         });
       } finally {
         setLoadingBusinesses(false);
@@ -224,35 +234,32 @@ export default function AddPayrollPolicyPage() {
     })();
   }, []);
 
-  // Load policies
   useEffect(() => {
     reloadPolicies();
   }, [reloadPolicies]);
 
-  // Input configs (consistent max/step with schema & DRF)
-  const inputs: Array<{
-    name: keyof PayrollPolicyFormValues;
-    label: string;
-    step: string;
-    max?: number;
-  }> = [
-    { name: 'graceMinutes', label: 'Grace minutes', step: '1', max: 999 },
-    { name: 'standardWorkingDays', label: 'Standard working days', step: '1', max: 999 },
-    { name: 'latePenaltyPerMinute', label: 'Late penalty per minute', step: '0.01', max: 999.99 },
-    { name: 'undertimePenaltyPerMinute', label: 'Undertime penalty per minute', step: '0.01', max: 999.99 },
-    { name: 'absentPenaltyPerDay', label: 'Absent penalty per day', step: '0.01', max: 99999.99 },
-    { name: 'otMultiplier', label: 'OT multiplier', step: '0.01', max: 99.99 },
-    { name: 'restDayMultiplier', label: 'Rest day multiplier', step: '0.01', max: 99.99 },
-    { name: 'holidayRegularMultiplier', label: 'Holiday regular multiplier', step: '0.01', max: 99.99 },
-    { name: 'holidaySpecialMultiplier', label: 'Holiday special multiplier', step: '0.01', max: 99.99 },
-  ];
+  const inputs = [
+    { name: "graceMinutes", label: "Grace minutes", step: "1", max: 999 },
+    { name: "standardWorkingDays", label: "Standard working days", step: "1", max: 999 },
+    { name: "latePenaltyPerMinute", label: "Late penalty per minute", step: "0.01", max: 999.99 },
+    { name: "undertimePenaltyPerMinute", label: "Undertime penalty per minute", step: "0.01", max: 999.99 },
+    { name: "absentPenaltyPerDay", label: "Absent penalty per day", step: "0.01", max: 99999.99 },
+    { name: "otMultiplier", label: "OT multiplier", step: "0.01", max: 99.99 },
+    { name: "restDayMultiplier", label: "Rest day multiplier", step: "0.01", max: 99.99 },
+    { name: "holidayRegularMultiplier", label: "Holiday regular multiplier", step: "0.01", max: 99.99 },
+    { name: "holidaySpecialMultiplier", label: "Holiday special multiplier", step: "0.01", max: 99.99 },
+  ] as const;
 
   return (
     <>
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-primary">Add Payroll Policy</CardTitle>
-          <CardDescription>Configure the payroll policies for a business entity.</CardDescription>
+          <CardTitle className="text-primary">
+            {editId ? "Edit Payroll Policy" : "Add Payroll Policy"}
+          </CardTitle>
+          <CardDescription>
+            {editId ? "Update the payroll policy details." : "Configure the payroll policies for a business entity."}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -268,7 +275,7 @@ export default function AddPayrollPolicyPage() {
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder={loadingBusinesses ? 'Loading...' : 'Select a business'} />
+                            <SelectValue placeholder={loadingBusinesses ? "Loading..." : "Select a business"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -294,13 +301,7 @@ export default function AddPayrollPolicyPage() {
                       <FormItem>
                         <FormLabel>{cfg.label}</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            step={cfg.step}
-                            min={0}
-                            {...(cfg.max ? { max: cfg.max } : {})}
-                            {...field}
-                          />
+                          <Input type="number" step={cfg.step} min={0} {...(cfg.max ? { max: cfg.max } : {})} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -310,13 +311,14 @@ export default function AddPayrollPolicyPage() {
               </div>
 
               <Button type="submit" disabled={submitting} className="bg-primary hover:bg-primary/90">
-                {submitting ? 'Adding...' : 'Add Policy'}
+                {submitting ? "Saving..." : editId ? "Update Policy" : "Add Policy"}
               </Button>
             </form>
           </Form>
         </CardContent>
       </Card>
 
+      {/* table list */}
       {loadingPolicies ? (
         <p className="mt-8">Loading policies...</p>
       ) : (
@@ -325,15 +327,16 @@ export default function AddPayrollPolicyPage() {
             <thead className="bg-gray-100">
               <tr>
                 <th className="border px-4 py-2">Business</th>
-                <th className="border px-4 py-2">Grace Minutes</th>
-                <th className="border px-4 py-2">Working Days</th>
-                <th className="border px-4 py-2">Late Penalty</th>
-                <th className="border px-4 py-2">Undertime Penalty</th>
-                <th className="border px-4 py-2">Absent Penalty</th>
-                <th className="border px-4 py-2">OT Multiplier</th>
-                <th className="border px-4 py-2">Rest Day Multiplier</th>
-                <th className="border px-4 py-2">Holiday Regular Multiplier</th>
-                <th className="border px-4 py-2">Holiday Special Multiplier</th>
+                <th className="border px-4 py-2">Grace</th>
+                <th className="border px-4 py-2">Days</th>
+                <th className="border px-4 py-2">Late</th>
+                <th className="border px-4 py-2">Undertime</th>
+                <th className="border px-4 py-2">Absent</th>
+                <th className="border px-4 py-2">OT</th>
+                <th className="border px-4 py-2">RestDay</th>
+                <th className="border px-4 py-2">Holiday Reg</th>
+                <th className="border px-4 py-2">Holiday Spec</th>
+                <th className="border px-4 py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -350,11 +353,15 @@ export default function AddPayrollPolicyPage() {
                     <td className="border px-4 py-2">{policy.rest_day_multiplier}</td>
                     <td className="border px-4 py-2">{policy.holiday_regular_multiplier}</td>
                     <td className="border px-4 py-2">{policy.holiday_special_multiplier}</td>
+                    <td className="border px-4 py-2 space-x-2">
+                      <Button size="sm" onClick={() => handleEdit(policy)}>Edit</Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleDelete(policy.id)}>Delete</Button>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={10} className="border px-4 py-2 text-center">
+                  <td colSpan={11} className="border px-4 py-2 text-center">
                     No policies found
                   </td>
                 </tr>

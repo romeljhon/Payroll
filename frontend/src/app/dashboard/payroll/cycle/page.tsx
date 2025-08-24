@@ -229,8 +229,8 @@ export default function PayrollCyclePage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="WEEKLY">Weekly</SelectItem>
-                          <SelectItem value="BI-WEEKLY">Bi-Weekly</SelectItem>
+                          <SelectItem value="SEMI_1">Semi Monthly 1st Half || 1-15 : 26-18</SelectItem>
+                          <SelectItem value="SEMI_2">Semi Monthly 1st Half ||  15-31: 11-25</SelectItem>
                           <SelectItem value="MONTHLY">Monthly</SelectItem>
                         </SelectContent>
                       </Select>

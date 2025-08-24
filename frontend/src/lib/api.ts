@@ -16,7 +16,7 @@ export async function loginRequest(
   password: string
 ): Promise<{ token: string }> {
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/accounts/login/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/accounts/login/",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -40,7 +40,7 @@ export async function logoutRequest(): Promise<void> {
   }
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/accounts/logout/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/accounts/logout/",
     {
       method: "POST",
       headers: {
@@ -62,7 +62,7 @@ export async function changePasswordRequest(
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/accounts/change-password/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/accounts/change-password/",
     {
       method: "POST",
       headers: {
@@ -86,7 +86,7 @@ export async function CreateAccount(body: any) {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/accounts/register/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/accounts/register/",
     {
       method: "POST",
       body: body,
@@ -109,7 +109,7 @@ export async function getAllEmployee() {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/employees/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/employees/",
     {
       method: "GET",
       headers: {
@@ -132,7 +132,7 @@ export async function getAllEmployeeById(id: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
-  const res = await fetch(`/payroll/api/employees/${id}/`, {
+  const res = await fetch(`/api/employees/${id}/`, {
     method: "GET",
     headers: {
       Authorization: `Token ${token}`,
@@ -154,7 +154,7 @@ export async function AddEmployee(body: any) {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/employees/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/employees/",
     {
       method: "POST",
       headers: {
@@ -178,7 +178,7 @@ export async function UpdateEmployee(id: string, body: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
-  const res = await fetch(`/payroll/api/employees/${id}/`, {
+  const res = await fetch(`/api/employees/${id}/`, {
     method: "PATCH",
     headers: {
       Authorization: `Token ${token}`,
@@ -204,8 +204,8 @@ export async function DeleteEmployee(id: number) {
   const base = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (!base) throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured");
 
-  // ✅ correct prefix: /payroll/api/..., not /api/payroll/...
-  const res = await fetch(`${base}/payroll/api/employees/${id}/`, {
+  // ✅ correct prefix: /api/..., not /api/...
+  const res = await fetch(`${base}/api/employees/${id}/`, {
     method: "DELETE",
     headers: {
       Authorization: `Token ${token}`,
@@ -235,7 +235,7 @@ export async function getPositions() {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/positions/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/positions/",
     {
       method: "GET",
       headers: {
@@ -259,7 +259,7 @@ export async function AddPositions(body: any) {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/positions/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/positions/",
     {
       method: "POST",
       headers: {
@@ -283,7 +283,7 @@ export async function DeletePositions(id: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
-  const res = await fetch(`/payroll/api/positions/${id}/`, {
+  const res = await fetch(`/api/positions/${id}/`, {
     method: "DELETE",
     headers: {
       Authorization: `Token ${token}`,
@@ -298,7 +298,7 @@ export async function UpdatePositions(id: string, body: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
-  const res = await fetch(`/payroll/api/positions/${id}/`, {
+  const res = await fetch(`/api/positions/${id}/`, {
     method: "PATCH",
     headers: {
       Authorization: `Token ${token}`,
@@ -323,7 +323,7 @@ export async function getBranches() {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/branches/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/branches/",
     {
       method: "GET",
       headers: {
@@ -347,7 +347,7 @@ export async function AddBranches(body: any) {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/branches/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/branches/",
     {
       method: "POST",
       headers: {
@@ -376,7 +376,7 @@ export async function DeleteBranches(id: number) {
   if (!base) throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured");
 
   // DRF usually expects a trailing slash; if your API has APPEND_SLASH=False, remove the final `/`.
-  const url = `${base}/payroll/api/branches/${id}/`;
+  const url = `${base}/api/branches/${id}/`;
 
   const res = await fetch(url, {
     method: "DELETE",
@@ -404,7 +404,7 @@ export async function UpdateBranches(id: string, body: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
-  const res = await fetch(`/payroll/api/branches/${id}/`, {
+  const res = await fetch(`/api/branches/${id}/`, {
     method: "PATCH",
     headers: {
       Authorization: `Token ${token}`,
@@ -429,7 +429,7 @@ export async function getBusiness() {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/businesses/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/businesses/",
     {
       method: "GET",
       headers: {
@@ -453,7 +453,7 @@ export async function AddBusiness(body: any) {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/businesses/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/businesses/",
     {
       method: "POST",
       headers: {
@@ -482,7 +482,7 @@ export async function DeleteBusiness(id: number | string) {
   if (!base) throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured");
 
   // If your DRF has APPEND_SLASH=True, keep trailing slash. If False, remove it.
-  const url = `${base}/payroll/api/businesses/${id}/`;
+  const url = `${base}/api/businesses/${id}/`;
 
   const res = await fetch(url, {
     method: "DELETE",
@@ -511,7 +511,7 @@ export async function UpdateBusiness(id: string, body: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
-  const res = await fetch(`/payroll/api/businesses/${id}/`, {
+  const res = await fetch(`/api/businesses/${id}/`, {
     method: "PATCH",
     headers: {
       Authorization: `Token ${token}`,
@@ -536,7 +536,7 @@ export async function getTimekeeping() {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/payroll/api/timekeeping/`,
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/timekeeping/`,
     {
       method: "GET",
       headers: {
@@ -559,7 +559,7 @@ export async function AddTimekeeping(body: any) {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/payroll/api/timekeeping/`,
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/timekeeping/`,
     {
       method: "POST",
       headers: {
@@ -591,7 +591,7 @@ export async function DeleteTimekeeping(id: number | string) {
   const base = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (!base) throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured");
 
-  const url = `${base}/payroll/api/timekeeping/${id}/`;
+  const url = `${base}/api/timekeeping/${id}/`;
 
   const res = await fetch(url, {
     method: "DELETE",
@@ -620,7 +620,7 @@ export async function UpdateTimekeeping(id: string | number, body: any) {
   const base = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (!base) throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured");
 
-  const res = await fetch(`${base}/payroll/api/timekeeping/${id}/`, {
+  const res = await fetch(`${base}/api/timekeeping/${id}/`, {
     method: "PATCH",
     headers: {
       Authorization: `Token ${token}`,
@@ -649,7 +649,7 @@ export async function getPolicys() {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/payroll/policies/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/policy/",
     {
       method: "GET",
       headers: {
@@ -673,7 +673,7 @@ export async function AddPolicy(body: any) {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/payroll/policies/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/policy/",
     {
       method: "POST",
       headers: {
@@ -692,6 +692,47 @@ export async function AddPolicy(body: any) {
 
   return data; // expected to be the created branch
 }
+// DELETE POLICY
+export async function DeletePolicy(id: any) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL +`/api/policy/${id}/`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  return res; // expected to be the created branch
+}
+// UPDATE POLICY
+export async function UpdatePolicy(id: string, body: any) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL+`/api/policy/${id}/`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to update salary component");
+  }
+
+  return data;
+}
+
+
 
 // ------------------------------------------------------------------------CYCLE-----------------------------------------
 // GET CYCLE
@@ -700,7 +741,7 @@ export async function getPayrollCycle() {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/payrollcycle/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/payrollcycle/",
     {
       method: "GET",
       headers: {
@@ -724,7 +765,7 @@ export async function AddPayrollCycle(body: any) {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/payrollcycle/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/payrollcycle/",
     {
       method: "POST",
       headers: {
@@ -748,7 +789,8 @@ export async function DeleteCycle(id: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
-  const res = await fetch(`/payroll/api/payrollcycle/${id}/`, {
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL +`/api/payrollcycle/${id}/`, {
     method: "DELETE",
     headers: {
       Authorization: `Token ${token}`,
@@ -763,7 +805,8 @@ export async function UpdateCycle(id: string, body: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
-  const res = await fetch(`/payroll/api/payrollcycle/${id}/`, {
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL +`/api/payrollcycle/${id}/`, {
     method: "PATCH",
     headers: {
       Authorization: `Token ${token}`,
@@ -789,7 +832,7 @@ export async function getSalaryComponent() {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/components/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/components/",
     {
       method: "GET",
       headers: {
@@ -812,7 +855,7 @@ export async function AddSalaryComponent(body: any) {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/components/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/components/",
     {
       method: "POST",
       headers: {
@@ -836,7 +879,8 @@ export async function DeleteSalaryComponent(id: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
-  const res = await fetch(`/payroll/api/components/${id}/`, {
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL +`/api/components/${id}/`, {
     method: "DELETE",
     headers: {
       Authorization: `Token ${token}`,
@@ -847,11 +891,12 @@ export async function DeleteSalaryComponent(id: any) {
   return res; // expected to be the created branch
 }
 // UPDATESalaryComponent
-export async function UpdateSalaryComponent(id: string, body: any) {
+export async function UpdateSalaryComponent(id: any, body: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
-  const res = await fetch(`/payroll/api/components/${id}/`, {
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL +`/api/components/${id}/`, {
     method: "PATCH",
     headers: {
       Authorization: `Token ${token}`,
@@ -876,7 +921,7 @@ export async function getSalaryStructure() {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/structure/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/structure/",
     {
       method: "GET",
       headers: {
@@ -900,7 +945,7 @@ export async function AddSalaryStructure(body: any) {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/structure/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/structure/",
     {
       method: "POST",
       headers: {
@@ -924,7 +969,8 @@ export async function DeleteSalaryStructure(id: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
-  const res = await fetch(`/payroll/api/structure/${id}/`, {
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL +`/api/structure/${id}/`, {
     method: "DELETE",
     headers: {
       Authorization: `Token ${token}`,
@@ -939,7 +985,8 @@ export async function UpdateSalaryStructure(id: string, body: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
-  const res = await fetch(`/payroll/api/structure/${id}/`, {
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL +`/api/structure/${id}/`, {
     method: "PATCH",
     headers: {
       Authorization: `Token ${token}`,
@@ -964,7 +1011,7 @@ export async function getHolidays() {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/holidays/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/holidays/",
     {
       method: "GET",
       headers: {
@@ -988,7 +1035,7 @@ export async function AddHolidays(body: any) {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/holidays/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/holidays/",
     {
       method: "POST",
       headers: {
@@ -1013,7 +1060,7 @@ export async function DeleteHolidays(id: any) {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + `/payroll/api/holidays/${id}/`, {
+    process.env.NEXT_PUBLIC_API_BASE_URL + `/api/holidays/${id}/`, {
     method: "DELETE",
     headers: {
       Authorization: `Token ${token}`,
@@ -1028,7 +1075,8 @@ export async function UpdateHolidays(id: string, body: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
-  const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + `/payroll/api/holidays/${id}/`, {
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL + `/api/holidays/${id}/`, {
     method: "PATCH",
     headers: {
       Authorization: `Token ${token}`,
@@ -1046,13 +1094,13 @@ export async function UpdateHolidays(id: string, body: any) {
   return data;
 }
 
-// GENERATE PAYSLIP FOR 1 EMPLOYEE
+// ----------------------------------------------------------------------GENERATE PAYSLIP FOR 1 EMPLOYEE--------------------------------------------
 export async function SinglePayslip(body: any) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/payroll/api/email/send-single-payslip/",
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/email/send-single-payslip/",
     {
       method: "POST",
       headers: {
@@ -1069,4 +1117,94 @@ export async function SinglePayslip(body: any) {
     throw new Error(data.detail || "Failed to create branch");
   }
   return data; // expected to be the created branch
+}
+
+// -----------------------------------------------------------------------------RECORDS OF PAYSLIP----------------------------------------------------
+// GET Records
+export async function getRecords() {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/records/",
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Token ${token}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to fetch employees");
+  }
+
+  return data; // this is the employee list
+}
+// ADDRecords
+export async function AddRecords(body: any) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/records/",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Token ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body), // ✅ stringify the body here
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to create branch");
+  }
+
+  return data; // expected to be the created branch
+}
+// DELETERecords
+export async function DeleteRecords(id: any) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL + `/api/records/${id}/`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  return res; // expected to be the created branch
+}
+// UPDATERecords
+export async function UpdateRecords(id: string, body: any) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL + `/api/records/${id}/`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to update salary Records");
+  }
+
+  return data;
 }
