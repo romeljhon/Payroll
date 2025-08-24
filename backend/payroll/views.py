@@ -13,14 +13,13 @@ from .serializers import PayrollPolicySerializer, PayrollRecordSerializer, Payro
 from datetime import date
 from django.db.models import Sum, Q
 from drf_spectacular.utils import extend_schema
-from payroll.services.payroll_cycles import get_dynamic_cutoff
 from payroll.services.mandatories import compute_mandatories_monthly, allocate_to_cycle
-from django.utils.dateparse import parse_date
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
 from common.filters import PayrollCycleFilter
 from payroll.services.payroll_engine import generate_payroll_for_employee, generate_batch_payroll
-from payroll.services.helpers import normalize_month, compute_regular_monthly_gross
+from payroll.services.helpers import normalize_month
+from payroll.utils import _date_in_cycle
 
 
 
@@ -160,99 +159,245 @@ class PayrollSummaryView(APIView):
     def get(self, request):
         employee_id = request.query_params.get('employee_id')
         month_param = request.query_params.get('month')
+        run_id = request.query_params.get('run')  # optional
+        cycle_type = request.query_params.get('cycle_type') or request.query_params.get('payroll_cycle')  # optional
+        include_13th = str(request.query_params.get('include_13th', 'false')).lower() in ('1', 'true', 'yes')
 
         if not employee_id or not month_param:
-            return Response({"error": "employee_id and month are required."}, status=400)
+            return Response({"error": "employee_id and month are required."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # normalize month (YYYY-MM or YYYY-MM-DD -> first day of month)
         try:
             month = normalize_month(month_param)
-        except ValueError as e:
-            return Response({"error": str(e)}, status=400)
+        except Exception as e:
+            return Response({"error": f"Invalid month: {e}"}, status=status.HTTP_400_BAD_REQUEST)
 
-        employee = get_object_or_404(Employee, id=employee_id)
-        records = PayrollRecord.objects.filter(employee=employee, month=month, is_13th_month=False)
+        employee = get_object_or_404(Employee.objects.select_related("branch__business"), id=employee_id)
 
-        earnings = records.filter(component__component_type='EARNING').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        deductions = records.filter(component__component_type='DEDUCTION').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        qs = (
+            PayrollRecord.objects
+            .select_related('component', 'payroll_cycle', 'run')
+            .filter(employee=employee, month=month)
+        )
 
-        serializer = PayrollSummarySerializer(records, many=True)
+        if not include_13th:
+            qs = qs.filter(is_13th_month=False)
+
+        # Prefer narrowing by run (most precise), else by cycle_type
+        if run_id:
+            qs = qs.filter(run_id=run_id)
+        elif cycle_type:
+            cycle_type = str(cycle_type).upper()
+            try:
+                cycle = PayrollCycle.objects.get(
+                    business=employee.branch.business,
+                    cycle_type=cycle_type,
+                    is_active=True
+                )
+            except PayrollCycle.DoesNotExist:
+                return Response(
+                    {"error": f"No active PayrollCycle '{cycle_type}' for this employee's business."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            qs = qs.filter(payroll_cycle=cycle)
+
+        earnings = qs.filter(component__component_type='EARNING').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        deductions = qs.filter(component__component_type='DEDUCTION').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        # Uses your existing serializer
+        serializer = PayrollSummarySerializer(qs, many=True)
 
         return Response({
             "employee": f"{employee.first_name} {employee.last_name}",
-            "month": month,  # returns ISO date (first day)
+            "month": month,  # DRF renders date as ISO
+            "run": int(run_id) if run_id else None,
+            "cycle_type": str(cycle_type).upper() if cycle_type else None,
             "earnings": earnings,
             "deductions": deductions,
             "net_pay": earnings - deductions,
-            "details": serializer.data
-        })
+            "details": serializer.data,
+        }, status=status.HTTP_200_OK)
 
 @extend_schema(tags=["Payroll"])
 class Generate13thMonthView(APIView):
+    """
+    POST body:
+    {
+      "employee_id": 123,
+      "year": 2025,
+      "cycle_type": "MONTHLY",   // optional, defaults to MONTHLY
+      "run_id": 10               // optional, attach to existing run; else a December run is created
+    }
+    """
     def post(self, request):
         employee_id = request.data.get("employee_id")
         year = request.data.get("year")
+        cycle_type = str(request.data.get("cycle_type", "MONTHLY")).upper()
+        run_id = request.data.get("run_id")
 
         if not employee_id or not year:
-            return Response({"error": "employee_id and year are required."}, status=400)
+            return Response({"error": "employee_id and year are required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        employee = get_object_or_404(Employee, id=employee_id)
+        # Validate year
+        try:
+            year = int(year)
+            start_date = date(year, 1, 1)
+            end_date = date(year, 12, 31)
+            dec_month = date(year, 12, 1)
+        except Exception:
+            return Response({"error": "Invalid year."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Fetch employee & business
+        employee = get_object_or_404(
+            Employee.objects.select_related("branch__business"),
+            id=employee_id
+        )
+        business = getattr(employee.branch, "business", None)
+        if not business:
+            return Response({"error": "Employee must belong to a branch with a business."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Components (must exist)
         basic_component = get_object_or_404(SalaryComponent, code="BASIC")
         thirteenth_component = get_object_or_404(SalaryComponent, code="13TH")
 
-        start_date = date(int(year), 1, 1)
-        end_date = date(int(year), 12, 31)
+        # Resolve cycle (FK required on PayrollRecord)
+        try:
+            cycle = PayrollCycle.objects.get(business=business, cycle_type=cycle_type, is_active=True)
+        except PayrollCycle.DoesNotExist:
+            return Response(
+                {"error": f"No active PayrollCycle '{cycle_type}' for this business."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        total_basic = PayrollRecord.objects.filter(
-            employee=employee,
-            component=basic_component,
-            month__range=(start_date, end_date),
-            is_13th_month=False
-        ).aggregate(total=Sum('amount'))['total'] or 0
+        # Get or create a December run
+        run = None
+        if run_id:
+            run = get_object_or_404(PayrollRun, pk=run_id)
+            if run.business_id != business.id or run.month != dec_month or run.payroll_cycle_id != cycle.id:
+                # Not strictly required, but safer to avoid attaching to a mismatched run
+                return Response(
+                    {"error": "Provided run does not match employee business / December month / chosen cycle."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            # Create a run for December of the given year
+            run, _ = PayrollRun.objects.get_or_create(
+                business=business,
+                month=dec_month,
+                payroll_cycle=cycle,
+                defaults={"status": "PENDING", "notes": f"13th month run for {year}"}
+            )
 
-        thirteenth_month_pay = round(total_basic / 12, 2)
+        # Sum BASIC for the whole year (exclude prior 13th records)
+        total_basic = (
+            PayrollRecord.objects
+            .filter(
+                employee=employee,
+                component=basic_component,
+                month__range=(start_date, end_date),
+                is_13th_month=False
+            )
+            .aggregate(total=Sum('amount'))['total']
+            or Decimal("0.00")
+        )
 
-        # Save 13th month record
+        thirteenth_month_pay = (total_basic / Decimal("12")).quantize(Decimal("0.01"))
+
+        # Upsert 13th month record for December + chosen cycle, attach to run
         record, created = PayrollRecord.objects.update_or_create(
             employee=employee,
             component=thirteenth_component,
-            month=date(int(year), 12, 1),  # Fixed to Dec
+            month=dec_month,
+            payroll_cycle=cycle,
             defaults={
-                'amount': thirteenth_month_pay,
-                'is_13th_month': True
+                "amount": thirteenth_month_pay,
+                "is_13th_month": True,
+                "run": run
             }
         )
+
+        # Mark run completed if we just created it for this purpose (optional rule)
+        if run.status == "PENDING":
+            run.status = "COMPLETED"
+            run.save(update_fields=["status"])
 
         return Response({
             "employee": f"{employee.first_name} {employee.last_name}",
             "year": year,
-            "13th_month": float(thirteenth_month_pay),
-            "status": "created" if created else "updated"
-        })
+            "cycle_type": cycle_type,
+            "run_id": run.id,
+            "13th_month": str(thirteenth_month_pay),
+            "status": "created" if created else "updated",
+        }, status=status.HTTP_200_OK)
     
 @extend_schema(tags=["Payroll"])
 class PayslipPreviewView(APIView):
+    """
+    GET params:
+      - employee_id: int (required)
+      - month: YYYY-MM or YYYY-MM-DD (required; normalized to 1st of month)
+      - run: int (optional; preferred to pinpoint a specific batch)
+      - cycle_type: "SEMI_1" | "SEMI_2" | "MONTHLY" (optional fallback)
+      - include_13th: true|false (default: false)
+    """
     def get(self, request):
         employee_id = request.query_params.get("employee_id")
         month_param = request.query_params.get("month")
+        run_id = request.query_params.get('run')
+        cycle_type = request.query_params.get('cycle_type') or request.query_params.get('payroll_cycle')
+        include_13th = str(request.query_params.get('include_13th', 'false')).lower() in ('1','true','yes')
 
         if not employee_id or not month_param:
             return Response({"error": "employee_id and month are required."}, status=400)
 
         try:
             month = normalize_month(month_param)
-        except ValueError as e:
-            return Response({"error": str(e)}, status=400)
+        except Exception as e:
+            return Response({"error": f"Invalid month: {e}"}, status=400)
 
-        employee = get_object_or_404(Employee, id=employee_id)
-        records = PayrollRecord.objects.filter(
-            employee=employee,
-            month=month
-        ).select_related('component').order_by('component__component_type', 'component__name')
+        employee = get_object_or_404(
+            Employee.objects.select_related("position", "branch__business"),
+            id=employee_id
+        )
+        business = getattr(employee.branch, "business", None)
+        if not business:
+            return Response({"error": "Employee must belong to a branch with a business."}, status=400)
 
-        earnings = sum((r.amount for r in records if r.component.component_type == "EARNING"), start=Decimal("0.00"))
-        deductions = sum((r.amount for r in records if r.component.component_type == "DEDUCTION"), start=Decimal("0.00"))
+        qs = (
+            PayrollRecord.objects
+            .select_related('component', 'payroll_cycle', 'run')
+            .filter(employee=employee, month=month)
+            .order_by('component__component_type', 'component__name', 'id')
+        )
 
-        serializer = PayslipComponentSerializer(records, many=True)
+        if not include_13th:
+            qs = qs.filter(is_13th_month=False)
+
+        used_cycle_type = None
+
+        # Prefer narrowing by run (most precise)
+        if run_id:
+            qs = qs.filter(run_id=run_id)
+        elif cycle_type:
+            used_cycle_type = str(cycle_type).upper()
+            try:
+                cycle = PayrollCycle.objects.get(business=business, cycle_type=used_cycle_type, is_active=True)
+            except PayrollCycle.DoesNotExist:
+                return Response({"error": f"No active PayrollCycle '{used_cycle_type}' for this business."}, status=400)
+            qs = qs.filter(payroll_cycle=cycle)
+        else:
+            # If both halves exist, require disambiguation
+            cycle_counts = qs.values('payroll_cycle__cycle_type').distinct().count()
+            if cycle_counts > 1:
+                return Response(
+                    {"error": "Multiple cycles found for this month. Provide ?run=<id> or &cycle_type=SEMI_1/SEMI_2/MONTHLY."},
+                    status=400
+                )
+
+        earnings = qs.filter(component__component_type="EARNING").aggregate(total=Sum('amount'))['total'] or Decimal("0.00")
+        deductions = qs.filter(component__component_type="DEDUCTION").aggregate(total=Sum('amount'))['total'] or Decimal("0.00")
+
+        serializer = PayslipComponentSerializer(qs, many=True)
 
         return Response({
             "employee": {
@@ -261,11 +406,13 @@ class PayslipPreviewView(APIView):
                 "branch": getattr(employee.branch, "name", None),
             },
             "month": month,
+            "run": int(run_id) if run_id else None,
+            "cycle_type": used_cycle_type,
             "components": serializer.data,
             "total_earnings": earnings,
             "total_deductions": deductions,
-            "net_pay": earnings - deductions
-        })
+            "net_pay": earnings - deductions,
+        }, status=200)
 
 @extend_schema(tags=["Payroll"])
 class BatchPayrollGenerationView(APIView):
@@ -392,16 +539,18 @@ class BatchPayrollGenerationView(APIView):
             run.save(update_fields=["status", "notes"])
             return Response({"detail": str(e)}, status=400)
         
-@extend_schema(tags=["Payroll"])    
+@extend_schema(tags=["Payroll"])
 class PayrollCycleViewSet(viewsets.ModelViewSet):
     """
-    CRUD for payroll cycles + helpful helpers:
+    CRUD for payroll cycles + helpers:
 
-    - GET  /payroll-cycles/?business=1&cycle_type=SEMI_1
-    - GET  /payroll-cycles/containing/?date=2025-08-14&business=1
-    - GET  /payroll-cycles/period/?year=2025&month=8&business=1
-    - POST /payroll-cycles/{id}/activate/
-    - POST /payroll-cycles/{id}/deactivate/
+    Via your router (e.g., /payroll/cycles/):
+
+    - GET  /payroll/cycles/?business=1&cycle_type=SEMI_1
+    - GET  /payroll/cycles/containing/?date=2025-08-14&business=1
+    - GET  /payroll/cycles/period/?year=2025&month=8&business=1
+    - POST /payroll/cycles/{id}/activate/
+    - POST /payroll/cycles/{id}/deactivate/
     """
     queryset = PayrollCycle.objects.select_related("business").all().order_by("business_id", "name")
     serializer_class = PayrollCycleSerializer
@@ -430,6 +579,11 @@ class PayrollCycleViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def containing(self, request):
+        """
+        Return cycles (from the filtered queryset) whose *current period* contains the given date.
+        Note: We check both the period anchored to the given date's month and the previous month
+        to correctly handle wrap-around cutoffs (e.g., 26→10).
+        """
         date_str = request.query_params.get("date")
         if not date_str:
             return Response({"detail": "Query param `date` is required (YYYY-MM-DD)."}, status=400)
@@ -446,11 +600,10 @@ class PayrollCycleViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def period(self, request):
         """
-        Compute concrete period bounds for each cycle for a given month.
-        Query params:
-          - year=YYYY (required)
-          - month=1..12 (required)
-          - business=<id> (optional)
+        Compute concrete [start_date, end_date] for each cycle in a given (year, month),
+        anchored to that month (wrap-around handled).
+        Query params (required): year=YYYY, month=1..12
+        Optional: business=<id> (via filterset)
         """
         try:
             year = int(request.query_params.get("year"))
@@ -474,7 +627,7 @@ class PayrollCycleViewSet(viewsets.ModelViewSet):
                 "end_date": end_dt.isoformat(),
             })
 
-        # Optional: order by start_date then name for readability
+        # For readability
         out.sort(key=lambda x: (x["start_date"], x["name"]))
         return Response(out)
 

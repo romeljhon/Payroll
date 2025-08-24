@@ -1,5 +1,6 @@
 # payroll/services/time_analysis.py
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, time as dt_time
+from types import SimpleNamespace
 from decimal import Decimal, ROUND_HALF_UP
 from collections import defaultdict
 
@@ -20,22 +21,21 @@ def _q2(v: Decimal) -> Decimal:
 
 # map analyzer codes -> payroll component codes
 CODE_MAP = {
-    "OT": "OT_PAY",
-    "REST_OT": "RESTDAY_PREMIUM",
-    "LATE": "LATE_PENALTY",
-    "UNDERTIME": "UNDERTIME_PENALTY",
-    "ABSENT": "ABSENT_PENALTY",
-    # holiday premium is inferred from timelog.holiday (not analyzer)
+    "OT": "OT",
+    "REST_OT": "REST_OT",
+    "LATE": "LATE",
+    "UNDERTIME": "UNDERTIME",
+    "ABSENT": "ABSENT",
 }
 
 # fallback metadata for auto-creating components in MVP
 COMPONENT_DEFS = {
-    "OT_PAY":            ("Overtime Pay", "EARNING"),
-    "RESTDAY_PREMIUM":   ("Rest Day Premium", "EARNING"),
-    "HOLIDAY_PREMIUM":   ("Holiday Premium", "EARNING"),
-    "LATE_PENALTY":      ("Late Penalty", "DEDUCTION"),
-    "UNDERTIME_PENALTY": ("Undertime Penalty", "DEDUCTION"),
-    "ABSENT_PENALTY":    ("Absence Penalty", "DEDUCTION"),
+    "OT": ("Overtime Pay", "EARNING"),
+    "REST_OT": ("Rest Day Overtime", "EARNING"),
+    "HOLIDAY_PREMIUM": ("Holiday Premium", "EARNING"),
+    "LATE": ("Late Penalty", "DEDUCTION"),
+    "UNDERTIME": ("Undertime Penalty", "DEDUCTION"),
+    "ABSENT": ("Absence Penalty", "DEDUCTION"),
 }
 
 def _get_component(code: str) -> SalaryComponent:
@@ -149,7 +149,16 @@ def compute_time_based_components(
         policy = _P()
 
     # derive hourly rate from base salary and standard days
-    schedule = getattr(employee.branch, "work_schedule", None)
+    schedule = getattr(getattr(employee, "branch", None), "work_schedule", None)
+    if schedule is None:
+        schedule = SimpleNamespace(
+            time_in=dt_time(9, 0),
+            time_out=dt_time(18, 0),
+            min_hours_required=Decimal("8.00"),
+            break_hours=Decimal("1.00"),
+            get_work_days=lambda: {0, 1, 2, 3, 4},  # Mon–Fri
+            grace_minutes=(getattr(policy, "grace_minutes", 0) if policy else 0),
+        )
     # expected daily hours based on schedule; fallback to 8
     if schedule and schedule.time_in and schedule.time_out is not None:
         # build a fake date just to measure span
@@ -200,19 +209,19 @@ def compute_time_based_components(
             hours = Decimal(str(entry.get("hours", 0) or 0))
             minutes = Decimal(str(entry.get("minutes", 0) or 0))
 
-            if comp_code == "OT_PAY":
+            if comp_code == "OT":
                 ot_mult = Decimal(str(getattr(policy, "ot_multiplier", Decimal("1.25"))))
                 amt = _q2(hours * hourly_rate * ot_mult)
                 totals[comp_code] += amt
 
-            elif comp_code == "RESTDAY_PREMIUM":
+            elif comp_code == "REST_OT":
                 # premium (extra) portion over normal rate
                 rest_extra = Decimal(str(getattr(policy, "rest_day_multiplier", Decimal("1.30")))) - Decimal("1")
                 if rest_extra > 0 and hours > 0:
                     amt = _q2(hours * hourly_rate * rest_extra)
                     totals[comp_code] += amt
 
-            elif comp_code == "LATE_PENALTY":
+            elif comp_code == "LATE":
                 grace = Decimal(str(getattr(policy, "grace_minutes", 0) or 0))
                 effective_minutes = minutes - grace
                 if effective_minutes > 0:
@@ -220,13 +229,13 @@ def compute_time_based_components(
                     amt = _q2(effective_minutes * rate)
                     totals[comp_code] += amt
 
-            elif comp_code == "UNDERTIME_PENALTY":
+            elif comp_code == "UNDERTIME":
                 rate = Decimal(str(getattr(policy, "undertime_penalty_per_minute", 0)))
                 if minutes > 0 and rate > 0:
                     amt = _q2(minutes * rate)
                     totals[comp_code] += amt
 
-            elif comp_code == "ABSENT_PENALTY":
+            elif comp_code == "ABSENT":
                 per_day = Decimal(str(getattr(policy, "absent_penalty_per_day", 0)))
                 # treat one ABSENT entry per log-date as 1 day; if you prefer fractional, convert hours/expected_daily_hours
                 days = Decimal("1") if hours > 0 else Decimal("0")

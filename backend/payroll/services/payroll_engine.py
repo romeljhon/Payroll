@@ -3,6 +3,9 @@
 from datetime import date
 from decimal import Decimal
 
+from django.conf import settings
+from django.db import transaction
+
 from employees.models import Employee
 from payroll.models import (
     PayrollRecord,
@@ -10,14 +13,17 @@ from payroll.models import (
     SalaryStructure,
     SalaryComponent,
     PayrollPolicy,
-    PayrollCycle
+    PayrollCycle,
 )
 from payroll.services.mandatories import compute_mandatories_monthly, allocate_to_cycle
 from payroll.services.payroll_cycles import get_dynamic_cutoff
 from payroll.services.time_analysis import compute_time_based_components
 from payroll.services.helpers import compute_regular_monthly_gross
 from payroll.services.salary_rates import get_salary_for_month
-from django.db import transaction
+
+# 🧰 Codes used by the mandatories service (when enabled)
+MANDATORY_CODES = {"SSS_EE", "PHIC_EE", "HDMF_EE", "TAX_WHT"}
+
 
 def generate_payroll_for_employee(
     employee,
@@ -28,6 +34,12 @@ def generate_payroll_for_employee(
     """
     Core payroll generator: builds PayrollRecords for an employee in a given month + cycle.
     Optionally attaches to a PayrollRun instance.
+
+    Behavior switches:
+      - If settings.PAYROLL_USE_MANDATORIES is False (MVP), government deductions should be
+        modeled in SalaryStructure as DEDUCTION components (e.g., SSS_EE, PHIC_EE, HDMF_EE, TAX_WHT).
+      - If True, engine computes mandatories programmatically and excludes those codes
+        from SalaryStructure to avoid double-counting.
     """
     if not employee.position or not employee.branch or not employee.branch.business:
         raise ValueError("Employee must be assigned to a branch, position, and business.")
@@ -39,7 +51,7 @@ def generate_payroll_for_employee(
         cutoff_start, cutoff_end = get_dynamic_cutoff(month, cycle_type, business)
     except Exception as e:
         raise ValueError(f"Unable to compute cutoff: {e}")
-    
+
     try:
         payroll_cycle = PayrollCycle.objects.get(
             business=business,
@@ -54,9 +66,19 @@ def generate_payroll_for_employee(
     with transaction.atomic():
         generated = []
 
-        # Fixed salary components from SalaryStructure
-        structures = SalaryStructure.objects.filter(position=employee.position).select_related("component")
-        for struct in structures:
+        # ─────────────────────────────────────────────────────────
+        # 1) Position-based components from SalaryStructure
+        #    Exclude mandatory codes only when the service is ON to avoid duplicates.
+        # ─────────────────────────────────────────────────────────
+        struct_qs = (
+            SalaryStructure.objects
+            .filter(position=employee.position)
+            .select_related("component")
+        )
+        if getattr(settings, "PAYROLL_USE_MANDATORIES", False):
+            struct_qs = struct_qs.exclude(component__code__in=MANDATORY_CODES)
+
+        for struct in struct_qs:
             comp = struct.component
             amount = (
                 (Decimal(struct.amount) / Decimal("100")) * base_salary
@@ -72,7 +94,7 @@ def generate_payroll_for_employee(
                 defaults={
                     "amount": amount,
                     "is_13th_month": False,
-                    "run": run  # 🔧 attached to PayrollRun
+                    "run": run,
                 }
             )
 
@@ -82,51 +104,57 @@ def generate_payroll_for_employee(
                 "code": comp.code,
                 "type": comp.component_type,
                 "amount": str(amount),
-                "source": "structure"
+                "source": "structure",
             })
 
-        # Mandatories
-        gross_monthly = compute_regular_monthly_gross(employee.position, base_salary)
-        monthly_mandatories = compute_mandatories_monthly(gross_monthly, policy)
-        allocated = allocate_to_cycle(monthly_mandatories, cycle_type)
-        components = SalaryComponent.objects.filter(code__in=allocated.keys())
-        comp_map = {c.code: c for c in components}
+        # ─────────────────────────────────────────────────────────
+        # 2) Government mandatories (SSS/PHIC/HDMF/Tax) — OPTIONAL
+        #    Only run when PAYROLL_USE_MANDATORIES is True.
+        # ─────────────────────────────────────────────────────────
+        if getattr(settings, "PAYROLL_USE_MANDATORIES", False):
+            gross_monthly = compute_regular_monthly_gross(employee.position, base_salary)
+            monthly_mandatories = compute_mandatories_monthly(gross_monthly, policy)
+            allocated = allocate_to_cycle(monthly_mandatories, cycle_type)
+            components = SalaryComponent.objects.filter(code__in=allocated.keys())
+            comp_map = {c.code: c for c in components}
 
-        for code, amount in allocated.items():
-            comp = comp_map.get(code)
-            if not comp:
-                continue
+            for code, amount in allocated.items():
+                comp = comp_map.get(code)
+                if not comp:
+                    continue
 
-            record, _created = PayrollRecord.objects.update_or_create(
-                employee=employee,
-                month=month,
-                component=comp,
-                payroll_cycle=payroll_cycle,
-                defaults={
-                    "amount": amount,
-                    "is_13th_month": False,
-                    "run": run
-                }
-            )
+                record, _created = PayrollRecord.objects.update_or_create(
+                    employee=employee,
+                    month=month,
+                    component=comp,
+                    payroll_cycle=payroll_cycle,
+                    defaults={
+                        "amount": amount,
+                        "is_13th_month": False,
+                        "run": run
+                    }
+                )
 
-            generated.append({
-                "record_id": record.id,
-                "component": comp.name,
-                "code": comp.code,
-                "type": comp.component_type,
-                "amount": str(amount),
-                "source": "mandatories"
-            })
+                generated.append({
+                    "record_id": record.id,
+                    "component": comp.name,
+                    "code": comp.code,
+                    "type": comp.component_type,
+                    "amount": str(amount),
+                    "source": "mandatories",
+                })
 
-        # Time-based components (OT, late, undertime, absent, etc.)
+        # ─────────────────────────────────────────────────────────
+        # 3) Time-based components (OT, late, undertime, absent, holiday/rest premiums)
+        # ─────────────────────────────────────────────────────────
         time_rows = compute_time_based_components(
             employee=employee,
-            start=cutoff_start,     # ✅ MODIFIED
-            end=cutoff_end,         # ✅ MODIFIED
-            base_salary=base_salary,# ✅ MODIFIED
-            policy=policy,          # ✅ MODIFIED
+            start=cutoff_start,
+            end=cutoff_end,
+            base_salary=base_salary,
+            policy=policy,
         )
-        
+
         for row in time_rows:
             comp = row["component"]
             amount = row["amount"]
@@ -149,7 +177,7 @@ def generate_payroll_for_employee(
                 "code": comp.code,
                 "type": comp.component_type,
                 "amount": str(amount),
-                "source": "time-analysis"
+                "source": "time-analysis",
             })
 
     return {
@@ -170,17 +198,17 @@ def generate_batch_payroll(
     month: date,
     cycle_type: str,
     employee_ids: list[int],
-    salary_overrides: dict[int, Decimal] | None = None,  # ✅ MODIFIED for SalaryRate: optional overrides
+    salary_overrides: dict[int, Decimal] | None = None,
     run=None
 ) -> list[dict]:
     """
     Bulk generation for multiple employees.
     - employee_ids: list of Employee PKs to include.
-    - salary_overrides: optional { employee_id: Decimal } to override SalaryRate for simulation.
+    - salary_overrides: optional { employee_id: Decimal } to override SalaryRate for simulation (not persisted).
     - Optionally attaches to a PayrollRun; auto-creates a run if not provided.
     Returns a list of result dicts per employee.
     """
-    from employees.models import Employee
+    from employees.models import Employee  # local import to keep module import-light
     results = []
 
     # Create PayrollRun if not provided
@@ -201,12 +229,16 @@ def generate_batch_payroll(
             is_active=True
         )
 
-        run = PayrollRun.objects.create(
+        run, created = PayrollRun.objects.get_or_create(
             business=business,
             month=month,
             payroll_cycle=payroll_cycle,
-            notes="Auto-generated by payroll engine"
+            defaults={"notes": "Auto-generated by payroll engine"},
         )
+        # Optional: keep a standard note
+        if not created and (run.notes or "") != "Auto-generated by payroll engine":
+            run.notes = "Auto-generated by payroll engine"
+            run.save(update_fields=["notes"])
 
     qs = (
         Employee.objects
@@ -216,17 +248,12 @@ def generate_batch_payroll(
 
     for employee in qs:
         try:
-            # ✅ MODIFIED for SalaryRate: allow simulation overrides
             if salary_overrides and employee.id in salary_overrides:
-                # Temporarily patch the rate via override (used only in return payload + mandatories/structure calc)
+                # For MVP we just note the override; engine still uses SalaryRate internally.
+                # If you need strict override, pass it into the generator and thread it through.
                 base_salary = Decimal(str(salary_overrides[employee.id]))
-                # Run the same function but temporarily monkey-patch by wrapping compute calls
-                # Simpler: call per-employee generator but short-circuit the SalaryRate fetch?
-                # To keep the API clean, we just compute locally and still let generator do the records.
-                # Here, we invoke the generator normally (uses SalaryRate); if strict override is required,
-                # you'd add an optional param to the generator to pass an override. For MVP, report override used.
                 result = generate_payroll_for_employee(employee, month, cycle_type, run=run)
-                result["note"] = f"Salary override provided: {base_salary}"
+                result["note"] = f"Salary override provided (not applied to records): {base_salary}"
             else:
                 result = generate_payroll_for_employee(employee, month, cycle_type, run=run)
 

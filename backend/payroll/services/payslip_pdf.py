@@ -1,4 +1,6 @@
 # payroll/services/payslip_pdf.py
+from __future__ import annotations
+
 from io import BytesIO
 from datetime import date
 from decimal import Decimal
@@ -9,23 +11,32 @@ from reportlab.lib.units import mm
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
+
 def _peso(amount: Decimal) -> str:
     return f"₱{amount:,.2f}"
 
+
 def generate_payslip_pdf(snapshot: dict, business_name: str | None = None) -> bytes:
     """
-    Build a simple payslip PDF from the snapshot dict returned by get_employee_payslip_snapshot().
-    Returns raw PDF bytes.
+    Build a simple payslip PDF from the snapshot dict returned by
+    get_employee_payslip_snapshot().
+
+    Expected snapshot keys:
+      - employee_id, employee_name
+      - month (date)
+      - cycle_type (str) and/or run_id (int)
+      - rows: [{component, type, amount}]
+      - totals: {earnings, deductions, net_pay}
     """
     buffer = BytesIO()
 
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        leftMargin=18*mm,
-        rightMargin=18*mm,
-        topMargin=18*mm,
-        bottomMargin=18*mm,
+        leftMargin=18 * mm,
+        rightMargin=18 * mm,
+        topMargin=18 * mm,
+        bottomMargin=18 * mm,
         title="Payslip",
         author=business_name or "Payroll System",
     )
@@ -39,11 +50,18 @@ def generate_payslip_pdf(snapshot: dict, business_name: str | None = None) -> by
     # Header
     title = business_name or "Payslip"
     period = snapshot.get("month")
-    cycle = snapshot.get("payroll_cycle")
+    cycle_type = snapshot.get("cycle_type") or snapshot.get("payroll_cycle")  # ✅ MODIFIED: tolerate old key
+    run_id = snapshot.get("run_id")  # ✅ MODIFIED
+
     safe_period = period.strftime("%B %Y") if isinstance(period, date) else str(period)
 
+    # Build a friendly cycle/run label
+    cycle_label = cycle_type or ""
+    if run_id:
+        cycle_label = f"{cycle_label} • Run #{run_id}" if cycle_label else f"Run #{run_id}"
+
     story.append(Paragraph(title, styles["Title"]))
-    story.append(Paragraph(f"Payroll Period: {safe_period} ({cycle})", styles["Normal"]))
+    story.append(Paragraph(f"Payroll Period: {safe_period}" + (f" ({cycle_label})" if cycle_label else ""), styles["Normal"]))
     story.append(Spacer(1, 6))
 
     # Employee section
@@ -58,19 +76,22 @@ def generate_payslip_pdf(snapshot: dict, business_name: str | None = None) -> by
     rows = snapshot.get("rows", [])
     table_data = [["Component", "Type", "Amount"]]
     for r in rows:
-        table_data.append([r["component"], r["type"], _peso(Decimal(r["amount"]))])
+        # amounts may be Decimal or str; normalize to Decimal for formatting
+        amt = r["amount"]
+        amt_dec = amt if isinstance(amt, Decimal) else Decimal(str(amt))
+        table_data.append([r["component"], r["type"], _peso(amt_dec)])
 
-    tbl = Table(table_data, colWidths=[90*mm, 30*mm, 40*mm])
+    tbl = Table(table_data, colWidths=[90 * mm, 30 * mm, 40 * mm])
     tbl.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#f2f2f2")),
-        ("TEXTCOLOR", (0,0), (-1,0), colors.black),
-        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
-        ("FONTSIZE", (0,0), (-1,0), 10),
-        ("ALIGN", (1,1), (1,-1), "CENTER"),
-        ("ALIGN", (2,1), (2,-1), "RIGHT"),
-        ("GRID", (0,0), (-1,-1), 0.25, colors.grey),
-        ("BOTTOMPADDING", (0,0), (-1,0), 6),
-        ("TOPPADDING", (0,0), (-1,0), 6),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f2f2f2")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, 0), 10),
+        ("ALIGN", (1, 1), (1, -1), "CENTER"),
+        ("ALIGN", (2, 1), (2, -1), "RIGHT"),
+        ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
+        ("TOPPADDING", (0, 0), (-1, 0), 6),
     ]))
     story.append(Paragraph("<b>Details</b>", styles["Header"]))
     story.append(tbl)
@@ -78,25 +99,30 @@ def generate_payslip_pdf(snapshot: dict, business_name: str | None = None) -> by
 
     # Totals
     totals = snapshot.get("totals", {})
-    earn = Decimal(totals.get("earnings", 0))
-    ded = Decimal(totals.get("deductions", 0))
-    net = Decimal(totals.get("net_pay", 0))
+    earn = totals.get("earnings", 0)
+    ded = totals.get("deductions", 0)
+    net = totals.get("net_pay", 0)
+
+    # Normalize to Decimal for formatting
+    earn_dec = earn if isinstance(earn, Decimal) else Decimal(str(earn))
+    ded_dec = ded if isinstance(ded, Decimal) else Decimal(str(ded))
+    net_dec = net if isinstance(net, Decimal) else Decimal(str(net))
 
     totals_tbl = Table(
         [
-            ["Earnings", _peso(earn)],
-            ["Deductions", _peso(ded)],
-            ["Net Pay", _peso(net)],
+            ["Earnings", _peso(earn_dec)],
+            ["Deductions", _peso(ded_dec)],
+            ["Net Pay", _peso(net_dec)],
         ],
-        colWidths=[90*mm, 70*mm]
+        colWidths=[90 * mm, 70 * mm]
     )
     totals_tbl.setStyle(TableStyle([
-        ("FONTNAME", (0,0), (-1,-2), "Helvetica"),
-        ("FONTNAME", (0,-1), (-1,-1), "Helvetica-Bold"),
-        ("ALIGN", (1,0), (1,-1), "RIGHT"),
-        ("LINEABOVE", (0,-1), (-1,-1), 0.5, colors.black),
-        ("BOTTOMPADDING", (0,0), (-1,-1), 6),
-        ("TOPPADDING", (0,0), (-1,-1), 6),
+        ("FONTNAME", (0, 0), (-1, -2), "Helvetica"),
+        ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+        ("LINEABOVE", (0, -1), (-1, -1), 0.5, colors.black),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
     ]))
     story.append(Paragraph("<b>Totals</b>", styles["Header"]))
     story.append(totals_tbl)
