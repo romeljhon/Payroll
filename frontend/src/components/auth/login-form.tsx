@@ -47,7 +47,7 @@ async function loginRequest(
   const res = await fetch(
     `${
       process.env.NEXT_PUBLIC_API_BASE_URL 
-    }/payroll/accounts/login/`,
+    }/accounts/login/`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
