@@ -47,7 +47,7 @@ async function registerRequest(values: RegisterFormValues) {
   const res = await fetch(
     `${
       process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://9fzvx8-8000.csb.app/"
-    }/payroll/accounts/register/`,
+    }/accounts/register/`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
