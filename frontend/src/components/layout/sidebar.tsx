@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   CalendarCheck,
   Calculator,
-  FileText,
   Users,
   Send,
   CalendarPlus,
@@ -36,28 +35,37 @@ interface NavItem {
   icon: React.ElementType;
 }
 
+// Main sidebar items
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/attendance", label: "Attendance", icon: CalendarCheck },
+  { href: "/dashboard/organization", label: "Organization", icon: Network },
   { href: "/dashboard/computation", label: "Payroll ", icon: Calculator },
   { href: "/dashboard/employees", label: "Employees", icon: Users },
-  { href: "/dashboard/organization", label: "Organization", icon: Network },
+  { href: "/dashboard/attendance", label: "Attendance", icon: CalendarCheck },
+  { href: "/dashboard/payslips/generate", label: "Generate Payslips", icon: Send },
+  { href: "/dashboard/tutorial", label: "View Tutorial", icon: Send },
 ];
 
+// Payroll dropdown items
 const payrollSubItems: NavItem[] = [
   { href: "/dashboard/payroll/cycle", label: "Payroll Cycle", icon: Calculator },
   { href: "/dashboard/payroll/policy", label: "Payroll Policy", icon: Calculator },
-  { href: "/dashboard/payroll/positions", label: "Positions", icon: Briefcase },
   { href: "/dashboard/payroll/holidays", label: "Holidays", icon: CalendarPlus },
-  { href: "/dashboard/payroll/salary-component", label: "Components", icon: Layers },
+  { href: "/dashboard/payroll/salary-component", label: "Salary Components", icon: Layers },
   { href: "/dashboard/payroll/salary-structure", label: "Salary Structure", icon: GitMerge },
   { href: "/dashboard/payroll/records", label: "Payroll Records", icon: Calculator },
-  { href: "/dashboard/payslips/generate", label: "Generate Payslips", icon: Send },
 ];
 
+// Organization dropdown items
 const organizationSubItems: NavItem[] = [
-  { href: "/dashboard/organization/branches", label: "Branches", icon: GitBranch },
   { href: "/dashboard/organization/business", label: "Business", icon: Briefcase },
+  { href: "/dashboard/organization/branches", label: "Branches", icon: GitBranch },
+];
+
+// Employees dropdown items
+const employeesSubItems: NavItem[] = [
+  { href: "/dashboard/employees/positions", label: "Positions", icon: Briefcase },
+  { href: "/dashboard/employees", label: "All Employees", icon: Users },
 ];
 
 export default function Sidebar() {
@@ -93,7 +101,7 @@ export default function Sidebar() {
         collapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Logo + Toggle */}
+      {/* Logo + Collapse Button */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
         {!collapsed && (
           <Link href="/dashboard" className="flex items-center space-x-2">
@@ -121,9 +129,11 @@ export default function Sidebar() {
                 (pathname.startsWith("/dashboard/payroll") ||
                   pathname.startsWith("/dashboard/payslips"))) ||
               (item.label === "Organization" &&
-                pathname.startsWith("/dashboard/organization"));
+                pathname.startsWith("/dashboard/organization")) ||
+              (item.label === "Employees" &&
+                pathname.startsWith("/dashboard/employees"));
 
-            // Payroll Dropdown
+            // Payroll Accordion
             if (item.label === "Payroll ") {
               return collapsed ? (
                 <Link
@@ -136,9 +146,7 @@ export default function Sidebar() {
                       : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
                   )}
                 >
-                  {isActive && (
-                    <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>
-                  )}
+                  {isActive && <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>}
                   <item.icon className="h-5 w-5" />
                 </Link>
               ) : (
@@ -152,9 +160,6 @@ export default function Sidebar() {
                           : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
                       )}
                     >
-                      {isActive && (
-                        <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>
-                      )}
                       <div className="flex items-center space-x-3">
                         <item.icon className="h-5 w-5" />
                         <span className="font-semibold tracking-wide">{item.label}</span>
@@ -182,7 +187,7 @@ export default function Sidebar() {
               );
             }
 
-            // Organization Dropdown
+            // Organization Accordion
             if (item.label === "Organization") {
               return collapsed ? (
                 <Link
@@ -195,9 +200,7 @@ export default function Sidebar() {
                       : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
                   )}
                 >
-                  {isActive && (
-                    <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>
-                  )}
+                  {isActive && <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>}
                   <item.icon className="h-5 w-5" />
                 </Link>
               ) : (
@@ -211,9 +214,6 @@ export default function Sidebar() {
                           : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
                       )}
                     >
-                      {isActive && (
-                        <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>
-                      )}
                       <div className="flex items-center space-x-3">
                         <item.icon className="h-5 w-5" />
                         <span className="font-semibold tracking-wide">{item.label}</span>
@@ -221,6 +221,60 @@ export default function Sidebar() {
                     </AccordionTrigger>
                     <AccordionContent className="ml-6 border-l border-sidebar-border py-1 space-y-1">
                       {organizationSubItems.map((subItem) => (
+                        <Link
+                          key={subItem.label}
+                          href={subItem.href}
+                          className={cn(
+                            "flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-[1.02]",
+                            pathname === subItem.href
+                              ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
+                              : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
+                          )}
+                        >
+                          <subItem.icon className="h-4 w-4" />
+                          <span>{subItem.label}</span>
+                        </Link>
+                      ))}
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              );
+            }
+
+            // Employees Accordion
+            if (item.label === "Employees") {
+              return collapsed ? (
+                <Link
+                  key={item.label}
+                  href="/dashboard/employees"
+                  className={cn(
+                    "group relative flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200 hover:scale-[1.02]",
+                    isActive
+                      ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
+                      : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
+                  )}
+                >
+                  {isActive && <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>}
+                  <item.icon className="h-5 w-5" />
+                </Link>
+              ) : (
+                <Accordion type="single" collapsible key={item.label} className="w-full">
+                  <AccordionItem value="employees" className="border-none">
+                    <AccordionTrigger
+                      className={cn(
+                        "group relative flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 hover:no-underline",
+                        isActive
+                          ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
+                          : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
+                      )}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <item.icon className="h-5 w-5" />
+                        <span className="font-semibold tracking-wide">{item.label}</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="ml-6 border-l border-sidebar-border py-1 space-y-1">
+                      {employeesSubItems.map((subItem) => (
                         <Link
                           key={subItem.label}
                           href={subItem.href}
@@ -254,9 +308,7 @@ export default function Sidebar() {
                 )}
                 aria-current={isActive ? "page" : undefined}
               >
-                {isActive && (
-                  <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>
-                )}
+                {isActive && <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>}
                 <item.icon className="h-5 w-5" />
                 {!collapsed && <span className="font-semibold tracking-wide">{item.label}</span>}
               </Link>
