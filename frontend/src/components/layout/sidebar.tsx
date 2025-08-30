@@ -48,11 +48,12 @@ const navItems: NavItem[] = [
 
 // Payroll dropdown items
 const payrollSubItems: NavItem[] = [
-  { href: "/dashboard/payroll/cycle", label: "Payroll Cycle", icon: Calculator },
-  { href: "/dashboard/payroll/policy", label: "Payroll Policy", icon: Calculator },
-  { href: "/dashboard/payroll/holidays", label: "Holidays", icon: CalendarPlus },
-  { href: "/dashboard/payroll/salary-component", label: "Salary Components", icon: Layers },
-  { href: "/dashboard/payroll/salary-structure", label: "Salary Structure", icon: GitMerge },
+  { href: "/dashboard/payroll/config", label: "Payroll Configuration", icon: GitMerge },
+  // { href: "/dashboard/payroll/cycle", label: "Payroll Cycle", icon: Calculator },
+  // { href: "/dashboard/payroll/policy", label: "Payroll Policy", icon: Calculator },
+  // { href: "/dashboard/payroll/holidays", label: "Holidays", icon: CalendarPlus },
+  // { href: "/dashboard/payroll/salary-component", label: "Salary Components", icon: Layers },
+  // { href: "/dashboard/payroll/salary-structure", label: "Salary Structure", icon: GitMerge },
   { href: "/dashboard/payroll/records", label: "Payroll Records", icon: Calculator },
 ];
 

@@ -159,7 +159,7 @@ export default function HolidayPage() {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-0">
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-1">
               {/* Name */}
               <FormField
                 control={form.control}
