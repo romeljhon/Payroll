@@ -48,6 +48,9 @@ const addEmployeeSchema = z.object({
   phone: z.string().min(3, { message: "Phone is required." }),
   position: z.string().min(1, { message: "Position is required." }),
   hire_date: z.string().min(1, { message: "Hire date is required." }),
+  salary_amount: z.string().min(1, { message: "Salary is required." }),
+  salary_start_date: z.string().min(1, { message: "Start date is required." }),
+  salary_end_date: z.string().optional(),
 });
 
 type AddEmployeeFormValues = z.infer<typeof addEmployeeSchema>;
@@ -81,6 +84,9 @@ export default function AddEmployeeDialog({
       phone: "",
       position: "",
       hire_date: "",
+      salary_amount: "",
+      salary_start_date: "",
+      salary_end_date: "",
     },
   });
 
@@ -118,7 +124,23 @@ export default function AddEmployeeDialog({
     setIsSubmitting(true);
 
     try {
-      const response = await AddEmployee(JSON.stringify(values));
+      const payload = {
+        branch: parseInt(values.branch, 10),
+        position: parseInt(values.position, 10),
+        first_name: values.first_name,
+        last_name: values.last_name,
+        email: values.email,
+        phone: values.phone,
+        hire_date: values.hire_date,
+        active: true,
+        salary_rate: {
+          amount: values.salary_amount,
+          start_date: values.salary_start_date,
+          end_date: values.salary_end_date || null,
+        },
+      };
+
+      const response = await AddEmployee(JSON.stringify(payload));
 
       const branchObj = branches.find(
         (b) => b.id === parseInt(values.branch, 10)
@@ -137,7 +159,8 @@ export default function AddEmployeeDialog({
         email: values.email,
         phone: values.phone,
         hire_date: values.hire_date,
-        active: true, // or derive from backend if returned
+        active: true,
+        salary_rate: payload.salary_rate, // include salary in state
       };
 
       onEmployeeAdded(newEmployee);
@@ -259,7 +282,7 @@ export default function AddEmployeeDialog({
                   <FormItem>
                     <FormLabel>Phone</FormLabel>
                     <FormControl>
-                      <Input placeholder="123-456-7890" {...field} />
+                      <Input placeholder="0917..." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -300,6 +323,55 @@ export default function AddEmployeeDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Hire date</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Salary Rate */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="salary_amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Salary Amount</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="30000.00"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="salary_start_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Start Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="salary_end_date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>End Date (optional)</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>

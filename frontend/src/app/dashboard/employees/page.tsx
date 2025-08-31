@@ -46,6 +46,7 @@ export interface Employee {
   hire_date: string;
   active: boolean;
   branch: number;
+  salary_rate:any
 }
 
 export default function EmployeesPage() {

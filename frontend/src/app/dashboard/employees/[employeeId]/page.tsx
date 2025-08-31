@@ -4,18 +4,31 @@ import React from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft, Mail, Briefcase, Building, UserCheck, Phone, Edit3, Calendar
+  ArrowLeft,
+  Mail,
+  Briefcase,
+  Building,
+  UserCheck,
+  Phone,
+  Edit3,
+  Calendar,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getAllEmployeeById } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 
+// ✅ FIXED: Added salary_rate to interface
 interface Employee {
   id: string;
   name: string;
@@ -27,6 +40,11 @@ interface Employee {
   phone?: string;
   joinDate?: string;
   employeeIdNo?: string;
+  salary_rate?: {
+    amount: string;
+    start_date: string;
+    end_date: string | null;
+  };
 }
 
 export default function EmployeeDetailPage() {
@@ -183,17 +201,35 @@ export default function EmployeeDetailPage() {
             </div>
           </section>
 
-          <section>
-            <h3 className="text-xl font-semibold text-primary mb-3">
-              Additional Information
-            </h3>
-            <div className="p-4 border rounded-lg bg-muted/50">
-              <p className="text-sm text-muted-foreground">
-                Further details like emergency contacts, bank information, or
-                performance notes would appear here in a full application.
-              </p>
-            </div>
-          </section>
+          {/* ✅ FIXED: Show salary details if available */}
+          {employee.salary_rate && (
+            <section>
+              <h3 className="text-xl font-semibold text-primary mb-3">
+                Salary Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                <div className="flex items-center space-x-3">
+                  <span>
+                    Amount: ₱{employee.salary_rate.amount}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <span>
+                    Start Date:{" "}
+                    {new Date(employee.salary_rate.start_date).toLocaleDateString()}
+                  </span>
+                </div>
+                {employee.salary_rate.end_date && (
+                  <div className="flex items-center space-x-3">
+                    <span>
+                      End Date:{" "}
+                      {new Date(employee.salary_rate.end_date).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
         </CardContent>
         <CardFooter className="bg-muted/30 p-6 border-t text-xs text-muted-foreground">
           This information is for administrative purposes only. Last updated:{" "}
