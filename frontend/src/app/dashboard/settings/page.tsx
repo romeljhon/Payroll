@@ -119,7 +119,7 @@ export default function SettingsPage() {
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="text-primary">Notification Settings</CardTitle>
-              <CardDescription>Manage how you receive notifications from PayEase.</CardDescription>
+              <CardDescription>Manage how you receive notifications from KazuPay Solutions .</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-muted-foreground">Notification settings are not yet available. Check back later!</p>

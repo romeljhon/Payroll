@@ -1,4 +1,4 @@
-# **App Name**: PayEase
+# **App Name**: KazuPay Solutions 
 
 ## Core Features:
 

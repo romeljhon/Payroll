@@ -120,7 +120,7 @@ function Ensure-Backend-Env {
 
 function Create-DjangoSuperUser {
     $username = "admin"
-    $email = "PayEase@admin.com"
+    $email = "KazuPay Solutions @admin.com"
     $password = "admin123"
 
     Write-Host "[INFO] Creating default Django superuser if not exists..."

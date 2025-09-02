@@ -103,7 +103,7 @@ export default function AddBusinessDialog({ isOpen, onOpenChange, onBusinessAdde
                                 <FormItem>
                                     <FormLabel>Business Name</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="e.g., PayEase Corp" {...field} />
+                                        <Input placeholder="e.g., KazuPay Solutions  Corp" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

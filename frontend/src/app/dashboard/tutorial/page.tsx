@@ -17,7 +17,7 @@ import { Progress } from "@/components/ui/progress";
 const onboardingSteps = [
   {
     icon: LayoutDashboard,
-    title: "Welcome to PayEase!",
+    title: "Welcome to KazuPay Solutions !",
     description:
       "Let's take a quick tour to get you started with managing your payroll efficiently.",
   },
@@ -46,7 +46,7 @@ const onboardingSteps = [
     icon: CheckCircle,
     title: "You're All Set!",
     description:
-      "You're ready to explore PayEase. If you need help, look for the support option. Enjoy streamlined payroll management!",
+      "You're ready to explore KazuPay Solutions . If you need help, look for the support option. Enjoy streamlined payroll management!",
   },
 ];
 

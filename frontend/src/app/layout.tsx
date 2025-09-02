@@ -5,8 +5,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ReactQueryProvider } from '@/lib/react-query-provider';
 
 export const metadata: Metadata = {
-  title: 'PayEase - Payroll Management System',
-  description: 'Efficient and easy payroll management by PayEase.',
+  title: 'KazuPay Solutions  - Payroll Management System',
+  description: 'Efficient and easy payroll management by KazuPay Solutions .',
 };
 
 export default function RootLayout({

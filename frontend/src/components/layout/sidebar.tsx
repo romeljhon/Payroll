@@ -18,7 +18,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import PayEaseLogo from "@/components/icons/payease-logo";
+import KazuPaySolutionsLogo from "@/components//icons/payease-logo"
 import { ScrollArea } from "@/components/ui/scroll-area";
 import React, { useState, useEffect } from "react";
 import {
@@ -39,9 +39,10 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/organization", label: "Organization", icon: Network },
-  { href: "/dashboard/computation", label: "Payroll ", icon: Calculator },
   { href: "/dashboard/employees", label: "Employees", icon: Users },
   { href: "/dashboard/attendance", label: "Attendance", icon: CalendarCheck },
+  { href: "/dashboard/computation", label: "Payroll ", icon: Calculator },
+
   { href: "/dashboard/payslips/generate", label: "Generate Payslips", icon: Send },
   { href: "/dashboard/tutorial", label: "View Tutorial", icon: Send },
 ];
@@ -102,24 +103,33 @@ export default function Sidebar() {
         collapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Logo + Collapse Button */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
-        {!collapsed && (
-          <Link href="/dashboard" className="flex items-center space-x-2">
-            <PayEaseLogo className="h-8 w-auto text-primary" />
-          </Link>
-        )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-2 rounded-lg hover:bg-sidebar-hover transition-all duration-200"
-        >
-          {collapsed ? (
-            <ChevronRight className="h-5 w-5" />
-          ) : (
-            <ChevronLeft className="h-5 w-5" />
-          )}
-        </button>
-      </div>
+{/* Logo + Collapse Button */}
+<div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
+  {!collapsed && (
+    <Link href="/dashboard" className="flex items-center space-x-2">
+      {/* If it's text-based logo */}
+      <span className="text-xl font-bold text-primary whitespace-nowrap">
+        KazuPay Solutions
+      </span>
+
+      {/* If it's an SVG/logo component */}
+      {/* <KazuPaySolutionsLogo className="h-8 w-auto text-primary" /> */}
+    </Link>
+  )}
+
+  <button
+    onClick={() => setCollapsed(!collapsed)}
+    className="p-2 rounded-lg hover:bg-sidebar-hover transition-all duration-200"
+  >
+    {collapsed ? (
+      <ChevronRight className="h-5 w-5" />
+    ) : (
+      <ChevronLeft className="h-5 w-5" />
+    )}
+  </button>
+</div>
+
+
 
       <ScrollArea className="flex-1">
         <nav className="py-6 px-2 space-y-2">
