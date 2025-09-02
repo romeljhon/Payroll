@@ -1,5 +1,5 @@
 import RegisterForm from "../../components/auth/register-form";
-import KazuPay Solutions Logo from "@/components/icons/KazuPay Solutions -logo";
+import KazuPaySolutionsLogo from "@/components/icons/payease-logo";
 import Link from "next/link";
 
 export default function RegisterPage() {
@@ -8,7 +8,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <Link href="/" className="inline-block">
-            <KazuPay Solutions Logo className="h-12 w-auto text-primary mx-auto" />
+            <KazuPaySolutionsLogo className="h-12 w-auto text-primary mx-auto" />
           </Link>
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-primary font-headline">
             Create your KazuPay Solutions  Account
