@@ -252,7 +252,7 @@ export default function AddPayrollPolicyPage() {
 
   return (
     <>
-      <Card className="shadow-lg">
+      <Card className="shadow-lg bg-background text-foreground border border-border">
         <CardHeader>
           <CardTitle className="text-primary">
             {editId ? "Edit Payroll Policy" : "Add Payroll Policy"}
@@ -301,7 +301,13 @@ export default function AddPayrollPolicyPage() {
                       <FormItem>
                         <FormLabel>{cfg.label}</FormLabel>
                         <FormControl>
-                          <Input type="number" step={cfg.step} min={0} {...(cfg.max ? { max: cfg.max } : {})} {...field} />
+                          <Input
+                            type="number"
+                            step={cfg.step}
+                            min={0}
+                            {...(cfg.max ? { max: cfg.max } : {})}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -310,7 +316,11 @@ export default function AddPayrollPolicyPage() {
                 ))}
               </div>
 
-              <Button type="submit" disabled={submitting} className="bg-primary hover:bg-primary/90">
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
                 {submitting ? "Saving..." : editId ? "Update Policy" : "Add Policy"}
               </Button>
             </form>
@@ -323,45 +333,53 @@ export default function AddPayrollPolicyPage() {
         <p className="mt-8">Loading policies...</p>
       ) : (
         <div className="mt-8 overflow-x-auto">
-          <table className="min-w-full border border-gray-300">
-            <thead className="bg-gray-100">
+          <table className="min-w-full border border-border text-foreground bg-background">
+            <thead className="bg-muted">
               <tr>
-                <th className="border px-4 py-2">Business</th>
-                <th className="border px-4 py-2">Grace</th>
-                <th className="border px-4 py-2">Days</th>
-                <th className="border px-4 py-2">Late</th>
-                <th className="border px-4 py-2">Undertime</th>
-                <th className="border px-4 py-2">Absent</th>
-                <th className="border px-4 py-2">OT</th>
-                <th className="border px-4 py-2">RestDay</th>
-                <th className="border px-4 py-2">Holiday Reg</th>
-                <th className="border px-4 py-2">Holiday Spec</th>
-                <th className="border px-4 py-2">Actions</th>
+                <th className="border border-border px-4 py-2">Business</th>
+                <th className="border border-border px-4 py-2">Grace</th>
+                <th className="border border-border px-4 py-2">Days</th>
+                <th className="border border-border px-4 py-2">Late</th>
+                <th className="border border-border px-4 py-2">Undertime</th>
+                <th className="border border-border px-4 py-2">Absent</th>
+                <th className="border border-border px-4 py-2">OT</th>
+                <th className="border border-border px-4 py-2">RestDay</th>
+                <th className="border border-border px-4 py-2">Holiday Reg</th>
+                <th className="border border-border px-4 py-2">Holiday Spec</th>
+                <th className="border border-border px-4 py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
               {policyList.length > 0 ? (
                 policyList.map((policy) => (
-                  <tr key={policy.id}>
-                    <td className="border px-4 py-2">{policy.business_name}</td>
-                    <td className="border px-4 py-2">{policy.grace_minutes}</td>
-                    <td className="border px-4 py-2">{policy.standard_working_days}</td>
-                    <td className="border px-4 py-2">{policy.late_penalty_per_minute}</td>
-                    <td className="border px-4 py-2">{policy.undertime_penalty_per_minute}</td>
-                    <td className="border px-4 py-2">{policy.absent_penalty_per_day}</td>
-                    <td className="border px-4 py-2">{policy.ot_multiplier}</td>
-                    <td className="border px-4 py-2">{policy.rest_day_multiplier}</td>
-                    <td className="border px-4 py-2">{policy.holiday_regular_multiplier}</td>
-                    <td className="border px-4 py-2">{policy.holiday_special_multiplier}</td>
-                    <td className="border px-4 py-2 space-x-2">
-                      <Button size="sm" onClick={() => handleEdit(policy)}>Edit</Button>
-                      <Button size="sm" variant="destructive" onClick={() => handleDelete(policy.id)}>Delete</Button>
+                  <tr key={policy.id} className="hover:bg-muted/50">
+                    <td className="border border-border px-4 py-2">{policy.business_name}</td>
+                    <td className="border border-border px-4 py-2">{policy.grace_minutes}</td>
+                    <td className="border border-border px-4 py-2">{policy.standard_working_days}</td>
+                    <td className="border border-border px-4 py-2">{policy.late_penalty_per_minute}</td>
+                    <td className="border border-border px-4 py-2">{policy.undertime_penalty_per_minute}</td>
+                    <td className="border border-border px-4 py-2">{policy.absent_penalty_per_day}</td>
+                    <td className="border border-border px-4 py-2">{policy.ot_multiplier}</td>
+                    <td className="border border-border px-4 py-2">{policy.rest_day_multiplier}</td>
+                    <td className="border border-border px-4 py-2">{policy.holiday_regular_multiplier}</td>
+                    <td className="border border-border px-4 py-2">{policy.holiday_special_multiplier}</td>
+                    <td className="border border-border px-4 py-2 space-x-2">
+                      <Button size="sm" onClick={() => handleEdit(policy)}>
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDelete(policy.id)}
+                      >
+                        Delete
+                      </Button>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={11} className="border px-4 py-2 text-center">
+                  <td colSpan={11} className="border border-border px-4 py-2 text-center">
                     No policies found
                   </td>
                 </tr>
