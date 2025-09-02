@@ -269,7 +269,8 @@ export default function SalaryStructurePage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
       {/* Create */}
       <Card className="shadow-lg">
         <CardHeader>

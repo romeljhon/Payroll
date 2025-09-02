@@ -251,7 +251,7 @@ export default function AddPayrollPolicyPage() {
   ] as const;
 
   return (
-    <>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       <Card className="shadow-lg bg-background text-foreground border border-border">
         <CardHeader>
           <CardTitle className="text-primary">
@@ -329,65 +329,85 @@ export default function AddPayrollPolicyPage() {
       </Card>
 
       {/* table list */}
+      {/* table list */}
       {loadingPolicies ? (
-        <p className="mt-8">Loading policies...</p>
+        <p className="mt-8 text-muted-foreground">Loading policies...</p>
       ) : (
-        <div className="mt-8 overflow-x-auto">
-          <table className="min-w-full border border-border text-foreground bg-background">
-            <thead className="bg-muted">
-              <tr>
-                <th className="border border-border px-4 py-2">Business</th>
-                <th className="border border-border px-4 py-2">Grace</th>
-                <th className="border border-border px-4 py-2">Days</th>
-                <th className="border border-border px-4 py-2">Late</th>
-                <th className="border border-border px-4 py-2">Undertime</th>
-                <th className="border border-border px-4 py-2">Absent</th>
-                <th className="border border-border px-4 py-2">OT</th>
-                <th className="border border-border px-4 py-2">RestDay</th>
-                <th className="border border-border px-4 py-2">Holiday Reg</th>
-                <th className="border border-border px-4 py-2">Holiday Spec</th>
-                <th className="border border-border px-4 py-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {policyList.length > 0 ? (
-                policyList.map((policy) => (
-                  <tr key={policy.id} className="hover:bg-muted/50">
-                    <td className="border border-border px-4 py-2">{policy.business_name}</td>
-                    <td className="border border-border px-4 py-2">{policy.grace_minutes}</td>
-                    <td className="border border-border px-4 py-2">{policy.standard_working_days}</td>
-                    <td className="border border-border px-4 py-2">{policy.late_penalty_per_minute}</td>
-                    <td className="border border-border px-4 py-2">{policy.undertime_penalty_per_minute}</td>
-                    <td className="border border-border px-4 py-2">{policy.absent_penalty_per_day}</td>
-                    <td className="border border-border px-4 py-2">{policy.ot_multiplier}</td>
-                    <td className="border border-border px-4 py-2">{policy.rest_day_multiplier}</td>
-                    <td className="border border-border px-4 py-2">{policy.holiday_regular_multiplier}</td>
-                    <td className="border border-border px-4 py-2">{policy.holiday_special_multiplier}</td>
-                    <td className="border border-border px-4 py-2 space-x-2">
-                      <Button size="sm" onClick={() => handleEdit(policy)}>
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleDelete(policy.id)}
-                      >
-                        Delete
-                      </Button>
+        <Card className="shadow-lg bg-background text-foreground border border-border">
+          <CardHeader>
+            <CardTitle className="text-primary">Payroll Policies</CardTitle>
+            <CardDescription>
+              Manage all payroll policies configured for businesses.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="overflow-x-auto">
+            <table className="w-full border-collapse rounded-lg overflow-hidden text-sm">
+              <thead className="bg-muted sticky top-0 z-10">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium text-foreground/80">Business</th>
+                  <th className="px-4 py-3 text-left font-medium text-foreground/80">Grace</th>
+                  <th className="px-4 py-3 text-left font-medium text-foreground/80">Days</th>
+                  <th className="px-4 py-3 text-left font-medium text-foreground/80">Late</th>
+                  <th className="px-4 py-3 text-left font-medium text-foreground/80">Undertime</th>
+                  <th className="px-4 py-3 text-left font-medium text-foreground/80">Absent</th>
+                  <th className="px-4 py-3 text-left font-medium text-foreground/80">OT</th>
+                  <th className="px-4 py-3 text-left font-medium text-foreground/80">RestDay</th>
+                  <th className="px-4 py-3 text-left font-medium text-foreground/80">Holiday Reg</th>
+                  <th className="px-4 py-3 text-left font-medium text-foreground/80">Holiday Spec</th>
+                  <th className="px-4 py-3 text-center font-medium text-foreground/80">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {policyList.length > 0 ? (
+                  policyList.map((policy) => (
+                    <tr
+                      key={policy.id}
+                      className="border-t border-border hover:bg-muted/50 transition-colors"
+                    >
+                      <td className="px-4 py-3">{policy.business_name}</td>
+                      <td className="px-4 py-3">{policy.grace_minutes}</td>
+                      <td className="px-4 py-3">{policy.standard_working_days}</td>
+                      <td className="px-4 py-3">{policy.late_penalty_per_minute}</td>
+                      <td className="px-4 py-3">{policy.undertime_penalty_per_minute}</td>
+                      <td className="px-4 py-3">{policy.absent_penalty_per_day}</td>
+                      <td className="px-4 py-3">{policy.ot_multiplier}</td>
+                      <td className="px-4 py-3">{policy.rest_day_multiplier}</td>
+                      <td className="px-4 py-3">{policy.holiday_regular_multiplier}</td>
+                      <td className="px-4 py-3">{policy.holiday_special_multiplier}</td>
+                      <td className="px-4 py-3 flex justify-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEdit(policy)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDelete(policy.id)}
+                        >
+                          Delete
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={11}
+                      className="px-4 py-6 text-center text-muted-foreground"
+                    >
+                      No policies found
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={11} className="border border-border px-4 py-2 text-center">
-                    No policies found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                )}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
       )}
-    </>
+
+    </div>
   );
 }

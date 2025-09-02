@@ -62,6 +62,7 @@ const payrollSubItems: NavItem[] = [
 const organizationSubItems: NavItem[] = [
   { href: "/dashboard/organization/business", label: "Business", icon: Briefcase },
   { href: "/dashboard/organization/branches", label: "Branches", icon: GitBranch },
+  { href: "/dashboard/organization/schedule", label: "Work Schedule", icon: GitBranch },
 ];
 
 // Employees dropdown items
