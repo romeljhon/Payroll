@@ -272,7 +272,7 @@ export default function SalaryStructurePage() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
       {/* Create */}
-      <Card className="shadow-lg">
+      <Card className="shadow-lg bg-background text-foreground border border-border">
         <CardHeader>
           <CardTitle className="text-primary flex items-center">
             <GitMerge className="mr-2 h-6 w-6" />
@@ -377,7 +377,7 @@ export default function SalaryStructurePage() {
       </Card>
 
       {/* List */}
-      <Card className="shadow-lg">
+      <Card className="shadow-lg bg-background text-foreground border border-border">
         <CardHeader>
           <CardTitle className="text-primary">Existing Salary Structures</CardTitle>
           <CardDescription>Review and manage current salary structures.</CardDescription>

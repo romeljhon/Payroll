@@ -145,7 +145,7 @@ export default function PayrollCyclePage() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Form */}
-      <Card className="shadow-lg">
+      <Card className="shadow-lg bg-background text-foreground border border-border">
         <CardHeader>
           <CardTitle className="text-primary">Add Payroll Cycle</CardTitle>
           <CardDescription>
@@ -299,7 +299,7 @@ export default function PayrollCyclePage() {
       </Card>
 
       {/* Table of cycles */}
-      <Card className="shadow-lg">
+      <Card className="shadow-lg bg-background text-foreground border border-border">
         <CardHeader>
           <CardTitle className="text-primary">Payroll Cycles</CardTitle>
           <CardDescription>
@@ -344,5 +344,6 @@ export default function PayrollCyclePage() {
         </CardContent>
       </Card>
     </div>
+    
   );
 }

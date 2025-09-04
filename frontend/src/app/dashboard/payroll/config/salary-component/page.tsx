@@ -167,7 +167,7 @@ export default function SalaryComponentPage() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
       {/* Add Component Form */}
-      <Card className="shadow-lg">
+      <Card className="shadow-lg bg-background text-foreground border border-border">
         <CardHeader>
           <CardTitle className="text-primary flex items-center">
             <Layers className="mr-2 h-6 w-6" /> Add Salary Component
@@ -210,7 +210,7 @@ export default function SalaryComponentPage() {
       </Card>
 
       {/* Component List */}
-      <Card className="shadow-lg">
+      <Card className="shadow-lg bg-background text-foreground border border-border">
         <CardHeader>
           <CardTitle className="text-primary">Component List</CardTitle>
           <CardDescription>List of all configured salary components.</CardDescription>

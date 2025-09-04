@@ -151,7 +151,7 @@ export default function HolidayPage() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
       {/* -------------------- Form -------------------- */}
-      <Card className="w-full shadow-xl">
+      <Card className="shadow-lg bg-background text-foreground border border-border">
         <CardHeader>
           <CardTitle className="text-2xl text-primary">
             {editingId ? "Edit Holiday" : "Create Holiday"}
@@ -279,7 +279,7 @@ export default function HolidayPage() {
       </Card>
 
       {/* -------------------- List -------------------- */}
-      <Card className="w-full shadow-xl">
+      <Card className="shadow-lg bg-background text-foreground border border-border">
         <CardHeader>
           <CardTitle className="text-2xl text-primary">Holiday List</CardTitle>
         </CardHeader>
