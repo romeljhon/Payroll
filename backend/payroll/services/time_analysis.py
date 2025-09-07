@@ -67,9 +67,8 @@ def analyze_timelog(timelog, schedule) -> list[dict]:
     - WORK DAY:
         * No punches -> ABSENT (full day)
         * Hours <= 0   -> ABSENT (full day)
-        * LATE if arrived after expected_in (beyond grace)
-        * UNDERTIME if left before expected_out
-        * If hours_worked < min_hours: add extra UNDERTIME minutes for shortfall (no ABSENT)
+        * LATE if arrived after expected_in (beyond grace; emits minutes net of grace)
+        * UNDERTIME once: max( left-early, shortfall-to-min-hours )
         * OT if hours_worked > expected_hours
     """
     policy = getattr(timelog.employee.branch.business, "payroll_policy", None)
@@ -116,12 +115,9 @@ def analyze_timelog(timelog, schedule) -> list[dict]:
 
     # HOLIDAY: do not emit penalties; premium is handled outside
     if is_holiday:
-        # If you want to credit OT hours on top of premium, you could emit {"code": "OT", "hours": ...} here.
-        # MVP: keep it clean—no penalties, no codes. Premium added elsewhere.
         return []
 
     # From here it's a regular working day
-    # If essentially zero hours -> ABSENT (no other penalties that day)
     if hours_worked <= Decimal("0.00"):
         return [{"code": "ABSENT", "hours": min_hours}]
 
@@ -131,25 +127,27 @@ def analyze_timelog(timelog, schedule) -> list[dict]:
     if exp_out_dt and exp_in_dt and exp_out_dt <= exp_in_dt:
         exp_out_dt += timedelta(days=1)
 
-    # LATE
+    # LATE (emit minutes already net of grace) ✅
     if exp_in_dt and dt_in > exp_in_dt:
         late_delta = dt_in - exp_in_dt
         late_minutes = _to_minutes(late_delta)
-        if late_minutes > Decimal(grace):
-            components.append({"code": "LATE", "minutes": (late_minutes - Decimal(grace))})
+        eff = late_minutes - Decimal(grace)
+        if eff > 0:
+            components.append({"code": "LATE", "minutes": eff})
 
-    # UNDERTIME (left before expected out)
+    # UNDERTIME — compute once, as the MAX of two sources ✅
+    undertime_from_left_early = Decimal("0.00")
     if exp_out_dt and dt_out < exp_out_dt:
         undertime_delta = exp_out_dt - dt_out
-        undertime_minutes = _to_minutes(undertime_delta)
-        if undertime_minutes > 0:
-            components.append({"code": "UNDERTIME", "minutes": undertime_minutes})
+        undertime_from_left_early = _to_minutes(undertime_delta)
 
-    # If below minimum hours, treat shortfall as additional undertime (NO ABSENT to avoid double penalty)
+    shortfall_minutes = Decimal("0.00")
     if hours_worked < min_hours:
         shortfall_minutes = (min_hours - hours_worked) * Decimal("60")
-        if shortfall_minutes > 0:
-            components.append({"code": "UNDERTIME", "minutes": shortfall_minutes.quantize(Decimal("0.01"))})
+
+    undertime_total = max(undertime_from_left_early, shortfall_minutes).quantize(Decimal("0.01"))
+    if undertime_total > 0:
+        components.append({"code": "UNDERTIME", "minutes": undertime_total})
 
     # OT: only if over expected hours (when we have expected bounds)
     if exp_in_dt and exp_out_dt:
@@ -259,11 +257,9 @@ def compute_time_based_components(
                     totals[comp_code] += amt
 
             elif comp_code == "LATE":
-                grace = Decimal(str(getattr(policy, "grace_minutes", 0) or 0))
-                effective_minutes = minutes - grace
-                if effective_minutes > 0:
-                    rate = Decimal(str(getattr(policy, "late_penalty_per_minute", 0)))
-                    amt = _q2(effective_minutes * rate)
+                rate = Decimal(str(getattr(policy, "late_penalty_per_minute", 0)))
+                if minutes > 0 and rate > 0:
+                    amt = _q2(minutes * rate)   # minutes already net of grace
                     totals[comp_code] += amt
 
             elif comp_code == "UNDERTIME":
