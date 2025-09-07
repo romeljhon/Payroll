@@ -198,3 +198,23 @@ class PayrollRunSerializer(serializers.ModelSerializer):
                     {"non_field_errors": ["A payroll run already exists for this business, month, and cycle."]}
                 )
         return attrs
+    
+class PayslipComponentSerializer(serializers.ModelSerializer):
+    component = serializers.CharField(source="component.name", read_only=True)
+    code = serializers.CharField(source="component.code", read_only=True)
+    type = serializers.CharField(source="component.component_type", read_only=True)
+
+    class Meta:
+        model = PayrollRecord
+        fields = ("component", "code", "type", "amount")
+
+
+class PayslipPreviewResponseSerializer(serializers.Serializer):
+    employee = serializers.DictField()
+    month = serializers.DateField()
+    cycle_type = serializers.ChoiceField(choices=["MONTHLY", "SEMI_1", "SEMI_2"])
+    run = serializers.IntegerField(required=False, allow_null=True)
+    components = PayslipComponentSerializer(many=True)
+    total_earnings = serializers.DecimalField(max_digits=16, decimal_places=2)
+    total_deductions = serializers.DecimalField(max_digits=16, decimal_places=2)
+    net_pay = serializers.DecimalField(max_digits=16, decimal_places=2)

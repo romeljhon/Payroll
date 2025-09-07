@@ -343,33 +343,33 @@ class PayslipPreviewView(APIView):
     def get(self, request):
         employee_id = request.query_params.get("employee_id")
         month_param = request.query_params.get("month")
-        run_id = request.query_params.get('run')
-        cycle_type = request.query_params.get('cycle_type') or request.query_params.get('payroll_cycle')
-        include_13th = str(request.query_params.get('include_13th', 'false')).lower() in ('1','true','yes')
+        run_id = request.query_params.get("run")
+        # accept either ?cycle_type= or ?payroll_cycle= as fallback
+        cycle_type = request.query_params.get("cycle_type") or request.query_params.get("payroll_cycle")
+        include_13th = str(request.query_params.get("include_13th", "false")).lower() in ("1", "true", "yes")
 
         if not employee_id or not month_param:
-            return Response({"error": "employee_id and month are required."}, status=400)
+            return Response({"error": "employee_id and month are required."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             month = normalize_month(month_param)
         except Exception as e:
-            return Response({"error": f"Invalid month: {e}"}, status=400)
+            return Response({"error": f"Invalid month: {e}"}, status=status.HTTP_400_BAD_REQUEST)
 
         employee = get_object_or_404(
             Employee.objects.select_related("position", "branch__business"),
-            id=employee_id
+            pk=employee_id
         )
         business = getattr(employee.branch, "business", None)
         if not business:
-            return Response({"error": "Employee must belong to a branch with a business."}, status=400)
+            return Response({"error": "Employee must belong to a branch with a business."}, status=status.HTTP_400_BAD_REQUEST)
 
         qs = (
             PayrollRecord.objects
-            .select_related('component', 'payroll_cycle', 'run')
+            .select_related("component", "payroll_cycle", "run")
             .filter(employee=employee, month=month)
-            .order_by('component__component_type', 'component__name', 'id')
+            .order_by("component__component_type", "component__name", "id")
         )
-
         if not include_13th:
             qs = qs.filter(is_13th_month=False)
 
@@ -377,30 +377,51 @@ class PayslipPreviewView(APIView):
 
         # Prefer narrowing by run (most precise)
         if run_id:
-            qs = qs.filter(run_id=run_id)
+            try:
+                run = PayrollRun.objects.select_related("payroll_cycle", "business").get(pk=run_id)
+            except PayrollRun.DoesNotExist:
+                return Response({"error": "Run not found."}, status=status.HTTP_404_NOT_FOUND)
+
+            # Safety checks
+            if run.business_id != business.id:
+                return Response({"error": "Run belongs to a different business."}, status=status.HTTP_400_BAD_REQUEST)
+            if run.month != month:
+                return Response({"error": "Run month does not match requested month."}, status=status.HTTP_400_BAD_REQUEST)
+
+            used_cycle_type = run.payroll_cycle.cycle_type
+            qs = qs.filter(run_id=run.id)
+
         elif cycle_type:
             used_cycle_type = str(cycle_type).upper()
             try:
                 cycle = PayrollCycle.objects.get(business=business, cycle_type=used_cycle_type, is_active=True)
             except PayrollCycle.DoesNotExist:
-                return Response({"error": f"No active PayrollCycle '{used_cycle_type}' for this business."}, status=400)
+                return Response({"error": f"No active PayrollCycle '{used_cycle_type}' for this business."}, status=status.HTTP_400_BAD_REQUEST)
             qs = qs.filter(payroll_cycle=cycle)
+
         else:
-            # If both halves exist, require disambiguation
-            cycle_counts = qs.values('payroll_cycle__cycle_type').distinct().count()
-            if cycle_counts > 1:
+            # Infer if unambiguous
+            distinct = qs.values_list("payroll_cycle__cycle_type", flat=True).distinct()
+            count = distinct.count()
+            if count > 1:
                 return Response(
                     {"error": "Multiple cycles found for this month. Provide ?run=<id> or &cycle_type=SEMI_1/SEMI_2/MONTHLY."},
-                    status=400
+                    status=status.HTTP_400_BAD_REQUEST
                 )
+            used_cycle_type = distinct.first() if count == 1 else None
 
-        earnings = qs.filter(component__component_type="EARNING").aggregate(total=Sum('amount'))['total'] or Decimal("0.00")
-        deductions = qs.filter(component__component_type="DEDUCTION").aggregate(total=Sum('amount'))['total'] or Decimal("0.00")
+        # If nothing matched → 404 (avoid empty payslip)
+        if not qs.exists():
+            return Response({"detail": "No payroll records found for this employee/month/cycle."}, status=status.HTTP_404_NOT_FOUND)
+
+        earnings = qs.filter(component__component_type="EARNING").aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+        deductions = qs.filter(component__component_type="DEDUCTION").aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
 
         serializer = PayslipComponentSerializer(qs, many=True)
 
         return Response({
             "employee": {
+                "id": employee.id,
                 "name": f"{employee.first_name} {employee.last_name}",
                 "position": getattr(employee.position, "name", None),
                 "branch": getattr(employee.branch, "name", None),
@@ -412,7 +433,7 @@ class PayslipPreviewView(APIView):
             "total_earnings": earnings,
             "total_deductions": deductions,
             "net_pay": earnings - deductions,
-        }, status=200)
+        }, status=status.HTTP_200_OK)
 
 @extend_schema(tags=["Payroll"])
 class BatchPayrollGenerationView(APIView):

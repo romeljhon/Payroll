@@ -5,60 +5,84 @@ from decimal import Decimal
 from datetime import date
 from typing import Dict, List, Optional
 
-from django.shortcuts import get_object_or_404
 from django.db.models import Sum
+from django.shortcuts import get_object_or_404
+from django.utils.dateparse import parse_date
 
 from employees.models import Employee
 from payroll.models import PayrollRecord, SalaryComponent, PayrollCycle, PayrollRun
 
 
+def _normalize_month(value) -> date:
+    """Accept date or 'YYYY-MM' / 'YYYY-MM-DD' and return first day of that month."""
+    if isinstance(value, date):
+        return value.replace(day=1)
+    d = parse_date(str(value))
+    if d:
+        return d.replace(day=1)
+    year, month = map(int, str(value).split("-")[:2])
+    return date(year, month, 1)
+
+
 def get_employee_payslip_snapshot(
     employee_id: int,
-    month: date,
-    run_id: Optional[int] = None,            # ✅ MODIFIED: prefer run pinning
-    cycle_type: Optional[str] = None,        # ✅ MODIFIED: fallback to cycle type
-    include_13th: bool = False,              # ✅ MODIFIED: default exclude 13th
+    month: date | str,
+    cycle_type: Optional[str] = None,   # ✅ moved before run_id for compatibility
+    run_id: Optional[int] = None,
+    include_13th: bool = False,
 ) -> Dict:
     """
     Read finalized payroll line-items for one employee in a given month,
     filtered by a specific run (preferred) or a cycle_type (SEMI_1|SEMI_2|MONTHLY).
 
-    Returns a dict suitable for rendering or PDF export:
+    Returns:
       {
         "employee_id", "employee_name", "employee_email",
-        "month", "cycle_type", "run_id",
+        "month", "payroll_cycle", "run_id",
         "rows": [ { "component", "type", "amount" }, ... ],
         "totals": { "earnings", "deductions", "net_pay" }
       }
     """
-    # Fetch employee (and business for cycle resolution)
+    # Normalize inputs
+    month = _normalize_month(month)
+
+    # Employee & business
     employee = get_object_or_404(
         Employee.objects.select_related("branch__business"),
         pk=employee_id
     )
     business = getattr(employee.branch, "business", None)
     if not business:
-        # Keep consistent with your API behavior
         raise ValueError("Employee must belong to a branch with a business.")
 
-    # Base queryset
+    # Base queryset (month + employee)
     qs = (
         PayrollRecord.objects
         .select_related("component", "employee", "payroll_cycle", "run")
         .filter(employee_id=employee_id, month=month)
         .order_by("component__component_type", "component__name", "id")
     )
-
     if not include_13th:
         qs = qs.filter(is_13th_month=False)
 
     used_cycle_type: Optional[str] = None
     used_run_id: Optional[int] = None
 
-    # Narrow by run first (most precise)
+    # Prefer narrowing by run (precise)
     if run_id is not None:
-        qs = qs.filter(run_id=run_id)
-        used_run_id = run_id
+        run = get_object_or_404(
+            PayrollRun.objects.select_related("payroll_cycle", "business"),
+            pk=run_id
+        )
+        if run.business_id != business.id:
+            raise ValueError("Run belongs to a different business.")
+        if run.month != month:
+            raise ValueError("Run month does not match requested month.")
+        qs = qs.filter(run_id=run.id)
+        used_run_id = run.id
+        used_cycle_type = run.payroll_cycle.cycle_type
+
+    # Else by cycle_type
     elif cycle_type:
         used_cycle_type = str(cycle_type).upper()
         cycle = get_object_or_404(
@@ -68,14 +92,17 @@ def get_employee_payslip_snapshot(
             is_active=True,
         )
         qs = qs.filter(payroll_cycle=cycle)
+
+    # Else infer cycle if unambiguous
     else:
-        # No run/cycle specified: if multiple cycles exist in this month, require disambiguation
         distinct_cycles = qs.values_list("payroll_cycle__cycle_type", flat=True).distinct()
-        if distinct_cycles.count() > 1:
+        count = distinct_cycles.count()
+        if count > 1:
             raise ValueError("Multiple cycles found for this employee/month. Provide run_id or cycle_type.")
+        if count == 1:
+            used_cycle_type = distinct_cycles.first()
 
-        used_cycle_type = distinct_cycles.first() if distinct_cycles.exists() else None
-
+    # Build rows and totals
     rows: List[Dict] = []
     earnings = Decimal("0.00")
     deductions = Decimal("0.00")
@@ -84,7 +111,7 @@ def get_employee_payslip_snapshot(
         rows.append({
             "component": r.component.name,
             "type": r.component.component_type,  # 'EARNING' or 'DEDUCTION'
-            "amount": r.amount,                  # Decimal is fine for internal usage
+            "amount": r.amount,
         })
         if r.component.component_type == SalaryComponent.EARNING:
             earnings += r.amount
@@ -93,7 +120,7 @@ def get_employee_payslip_snapshot(
 
     net = earnings - deductions
 
-    # Identity (use employee we already fetched; don’t rely on qs[0])
+    # Identity
     emp_name = f"{employee.first_name} {employee.last_name}".strip()
     emp_email = getattr(employee, "email", None)
 
@@ -102,8 +129,8 @@ def get_employee_payslip_snapshot(
         "employee_name": emp_name,
         "employee_email": emp_email,
         "month": month,
-        "cycle_type": used_cycle_type,   # ✅ MODIFIED: standardized key
-        "run_id": used_run_id,           # ✅ MODIFIED
+        "payroll_cycle": used_cycle_type,  # keep key name consistent for email/pdf
+        "run_id": used_run_id,
         "rows": rows,
         "totals": {
             "earnings": earnings,

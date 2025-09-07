@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Business, Branch
+from .models import Business, Branch, WorkSchedulePolicy
 
 class BusinessSerializer(serializers.ModelSerializer):
     name = serializers.CharField(max_length=255)
@@ -37,3 +37,23 @@ class BranchSerializer(serializers.ModelSerializer):
         ).exists():
             raise serializers.ValidationError({"name": "Branch with this name already exists for the business."})
         return attrs
+
+class WorkSchedulePolicySerializer(serializers.ModelSerializer):
+    branch_name = serializers.CharField(source="branch.name", read_only=True)
+    business_id = serializers.IntegerField(source="branch.business_id", read_only=True)
+
+    class Meta:
+        model = WorkSchedulePolicy
+        fields = "__all__"
+
+    def validate_regular_work_days(self, value: str) -> str:
+        parts = [p.strip() for p in (value or "").split(",") if p.strip()]
+        out = []
+        for p in parts:
+            if not p.isdigit():
+                raise serializers.ValidationError("Days must be digits 0..6 (Mon..Sun).")
+            v = int(p)
+            if not (0 <= v <= 6):
+                raise serializers.ValidationError("Each day must be in 0..6 (Mon..Sun).")
+            out.append(str(v))
+        return ",".join(out) if out else "0,1,2,3,4"

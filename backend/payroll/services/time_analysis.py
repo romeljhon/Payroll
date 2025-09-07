@@ -58,67 +58,104 @@ def _worked_hours_for_log(log: TimeLog, break_hours: Decimal) -> Decimal:
 # ─────────────────────────────────────────────────────────
 # your analyzer (UNCHANGED)
 # ─────────────────────────────────────────────────────────
-def analyze_timelog(timelog: TimeLog, schedule) -> list[dict]:
+def analyze_timelog(timelog, schedule) -> list[dict]:
     """
-    Produce time-based codes from a single timelog against a branch schedule.
-    Returns a list of dicts like {"code": "LATE", "minutes": Decimal(...)}.
-    """
-    # Guard: missing punches
-    if not timelog.time_in or not timelog.time_out:
-        return [{"code": "ABSENT", "hours": Decimal(schedule.min_hours_required)}]
+    Clean, non-overlapping codes:
 
-    # Policy overrides / schedule params
+    - REST DAY: only REST_OT (no LATE / UNDERTIME / ABSENT)
+    - HOLIDAY:  no penalties at all (LATE/UNDERTIME/ABSENT suppressed). Holiday premium is added elsewhere.
+    - WORK DAY:
+        * No punches -> ABSENT (full day)
+        * Hours <= 0   -> ABSENT (full day)
+        * LATE if arrived after expected_in (beyond grace)
+        * UNDERTIME if left before expected_out
+        * If hours_worked < min_hours: add extra UNDERTIME minutes for shortfall (no ABSENT)
+        * OT if hours_worked > expected_hours
+    """
     policy = getattr(timelog.employee.branch.business, "payroll_policy", None)
-    grace = schedule.grace_minutes if schedule.grace_minutes else (getattr(policy, "grace_minutes", 0) or 0)
 
-    expected_in = schedule.time_in
-    expected_out = schedule.time_out
-    min_hours = Decimal(schedule.min_hours_required)
-    break_hours = Decimal(schedule.break_hours)
+    # Pull schedule params with safe fallbacks
+    grace = getattr(schedule, "grace_minutes", None)
+    if grace is None:
+        grace = getattr(policy, "grace_minutes", 0) or 0
+    break_hours = Decimal(str(getattr(schedule, "break_hours", "1.00") or "1.00"))
+    min_hours = Decimal(str(getattr(schedule, "min_hours_required", "8.00") or "8.00"))
 
-    work_days = schedule.get_work_days()
+    expected_in = getattr(schedule, "time_in", None)
+    expected_out = getattr(schedule, "time_out", None)
+
+    # Workdays (Mon–Fri) fallback if schedule missing
+    work_days = schedule.get_work_days() if schedule and hasattr(schedule, "get_work_days") else {0,1,2,3,4}
     weekday = timelog.date.weekday()
     is_rest_day = weekday not in work_days
+    is_holiday = bool(getattr(timelog, "holiday_id", None))
 
-    # Build datetimes; handle overnight shifts (out < in)
+    # Missing punches
+    if not timelog.time_in or not timelog.time_out:
+        # Rest day or holiday: no penalties
+        if is_rest_day or is_holiday:
+            return []
+        return [{"code": "ABSENT", "hours": min_hours}]
+
+    # Build times & worked hours (handle overnight)
     dt_in = datetime.combine(timelog.date, timelog.time_in)
     dt_out = datetime.combine(timelog.date, timelog.time_out)
     if dt_out <= dt_in:
         dt_out += timedelta(days=1)
-
     hours_worked = _to_hours(dt_out - dt_in) - break_hours
+    if hours_worked < 0:
+        hours_worked = Decimal("0.00")
 
     components: list[dict] = []
 
+    # REST DAY: only credit the hours as REST_OT; no penalties
+    if is_rest_day:
+        if hours_worked > 0:
+            components.append({"code": "REST_OT", "hours": hours_worked})
+        return components
+
+    # HOLIDAY: do not emit penalties; premium is handled outside
+    if is_holiday:
+        # If you want to credit OT hours on top of premium, you could emit {"code": "OT", "hours": ...} here.
+        # MVP: keep it clean—no penalties, no codes. Premium added elsewhere.
+        return []
+
+    # From here it's a regular working day
+    # If essentially zero hours -> ABSENT (no other penalties that day)
+    if hours_worked <= Decimal("0.00"):
+        return [{"code": "ABSENT", "hours": min_hours}]
+
+    # Expected day bounds (guard if schedule missing)
+    exp_in_dt = datetime.combine(timelog.date, expected_in) if expected_in else None
+    exp_out_dt = datetime.combine(timelog.date, expected_out) if expected_out else None
+    if exp_out_dt and exp_in_dt and exp_out_dt <= exp_in_dt:
+        exp_out_dt += timedelta(days=1)
+
     # LATE
-    exp_in_dt = datetime.combine(timelog.date, expected_in)
-    if dt_in > exp_in_dt:
+    if exp_in_dt and dt_in > exp_in_dt:
         late_delta = dt_in - exp_in_dt
         late_minutes = _to_minutes(late_delta)
         if late_minutes > Decimal(grace):
-            components.append({"code": "LATE", "minutes": late_minutes})
+            components.append({"code": "LATE", "minutes": (late_minutes - Decimal(grace))})
 
-    # UNDERTIME
-    exp_out_dt = datetime.combine(timelog.date, expected_out)
-    if exp_out_dt <= exp_in_dt:
-        exp_out_dt += timedelta(days=1)  # expected overnight
-    if dt_out < exp_out_dt:
+    # UNDERTIME (left before expected out)
+    if exp_out_dt and dt_out < exp_out_dt:
         undertime_delta = exp_out_dt - dt_out
         undertime_minutes = _to_minutes(undertime_delta)
-        components.append({"code": "UNDERTIME", "minutes": undertime_minutes})
+        if undertime_minutes > 0:
+            components.append({"code": "UNDERTIME", "minutes": undertime_minutes})
 
-    # ABSENT (below minimum required hours)
+    # If below minimum hours, treat shortfall as additional undertime (NO ABSENT to avoid double penalty)
     if hours_worked < min_hours:
-        components.append({"code": "ABSENT", "hours": (min_hours - hours_worked).quantize(Decimal("0.01"))})
+        shortfall_minutes = (min_hours - hours_worked) * Decimal("60")
+        if shortfall_minutes > 0:
+            components.append({"code": "UNDERTIME", "minutes": shortfall_minutes.quantize(Decimal("0.01"))})
 
-    # OVERTIME (compute expected day length rather than fixed 8 hours)
-    expected_hours = _to_hours(exp_out_dt - exp_in_dt) - break_hours
-    if not is_rest_day and hours_worked > expected_hours:
-        components.append({"code": "OT", "hours": (hours_worked - expected_hours).quantize(Decimal("0.01"))})
-
-    # REST DAY OT
-    if is_rest_day and hours_worked > 0:
-        components.append({"code": "REST_OT", "hours": hours_worked.quantize(Decimal("0.01"))})
+    # OT: only if over expected hours (when we have expected bounds)
+    if exp_in_dt and exp_out_dt:
+        expected_hours = _to_hours(exp_out_dt - exp_in_dt) - break_hours
+        if hours_worked > expected_hours:
+            components.append({"code": "OT", "hours": (hours_worked - expected_hours).quantize(Decimal("0.01"))})
 
     return components
 
