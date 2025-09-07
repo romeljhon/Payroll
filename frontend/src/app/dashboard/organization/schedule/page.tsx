@@ -5,7 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -14,66 +21,97 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getBranches } from "@/lib/api";
 
-// Example API calls (replace with your real API utils)
-async function fetchBusinesses() {
-  const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + "/api/businesses/");
-  return res.json();
-}
-
-async function fetchBranches() {
-  const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + "/api/branches/");
-  return res.json();
-}
-
+// ✅ Fetch schedules API
 async function fetchSchedules() {
-  const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + "/api/work-schedules/");
-  return res.json();
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/work-schedule-policies/",
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Token ${token}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to fetch schedules");
+  return data;
 }
 
 export default function WorkSchedulePage() {
-  const [businesses, setBusinesses] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [schedules, setSchedules] = useState<any[]>([]);
 
-  const [selectedBusiness, setSelectedBusiness] = useState("");
+  // Form states
   const [selectedBranch, setSelectedBranch] = useState("");
   const [timeIn, setTimeIn] = useState("");
   const [timeOut, setTimeOut] = useState("");
+  const [graceMinutes, setGraceMinutes] = useState("15");
+  const [breakHours, setBreakHours] = useState("1.00");
+  const [minHours, setMinHours] = useState("8.00");
+  const [isFlexible, setIsFlexible] = useState(false);
+  const [regularDays, setRegularDays] = useState<number[]>([]);
 
   useEffect(() => {
-    fetchBusinesses().then(setBusinesses);
-    fetchBranches().then(setBranches);
-    fetchSchedules().then(setSchedules);
+    getBranches().then(setBranches).catch(console.error);
+    fetchSchedules().then(setSchedules).catch(console.error);
   }, []);
+
+  const handleDayToggle = (day: number) => {
+    setRegularDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const scheduleData = {
-      business: selectedBusiness,
-      branch: selectedBranch,
-      time_in: timeIn,
-      time_out: timeOut,
+      branch: Number(selectedBranch),
+      time_in: timeIn ? `${timeIn}:00` : null,
+      time_out: timeOut ? `${timeOut}:00` : null,
+      grace_minutes: Number(graceMinutes),
+      break_hours: breakHours,
+      min_hours_required: minHours,
+      is_flexible: isFlexible,
+      regular_work_days: regularDays.sort().join(","), // "0,1,2,3,4"
     };
 
     console.log("Saving schedule:", scheduleData);
 
-    // Example POST request (replace with your backend endpoint)
-    await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + "/api/work-schedules/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(scheduleData),
-    });
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("No token found");
 
-    // Refresh schedules after saving
-    fetchSchedules().then(setSchedules);
+    await fetch(
+      process.env.NEXT_PUBLIC_API_BASE_URL + "/api/work-schedule-policies/",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Token ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(scheduleData),
+      }
+    );
+
+    // Refresh schedules
+    fetchSchedules().then(setSchedules).catch(console.error);
 
     // Reset form
-    setSelectedBusiness("");
     setSelectedBranch("");
     setTimeIn("");
     setTimeOut("");
+    setGraceMinutes("15");
+    setBreakHours("1.00");
+    setMinHours("8.00");
+    setIsFlexible(false);
+    setRegularDays([]);
   };
 
   return (
@@ -85,23 +123,6 @@ export default function WorkSchedulePage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Business Selector */}
-            <div className="space-y-2">
-              <Label>Business</Label>
-              <Select value={selectedBusiness} onValueChange={setSelectedBusiness}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a business" />
-                </SelectTrigger>
-                <SelectContent>
-                  {businesses.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             {/* Branch Selector */}
             <div className="space-y-2">
               <Label>Branch</Label>
@@ -111,7 +132,7 @@ export default function WorkSchedulePage() {
                 </SelectTrigger>
                 <SelectContent>
                   {branches.map((br) => (
-                    <SelectItem key={br.id} value={br.id}>
+                    <SelectItem key={br.id} value={String(br.id)}>
                       {br.name}
                     </SelectItem>
                   ))}
@@ -141,6 +162,64 @@ export default function WorkSchedulePage() {
               />
             </div>
 
+            {/* Grace Minutes */}
+            <div className="space-y-2">
+              <Label>Grace Minutes</Label>
+              <Input
+                type="number"
+                value={graceMinutes}
+                onChange={(e) => setGraceMinutes(e.target.value)}
+              />
+            </div>
+
+            {/* Break Hours */}
+            <div className="space-y-2">
+              <Label>Break Hours</Label>
+              <Input
+                type="number"
+                value={breakHours}
+                onChange={(e) => setBreakHours(e.target.value)}
+              />
+            </div>
+
+            {/* Minimum Hours Required */}
+            <div className="space-y-2">
+              <Label>Minimum Hours Required</Label>
+              <Input
+                type="number"
+                value={minHours}
+                onChange={(e) => setMinHours(e.target.value)}
+              />
+            </div>
+
+            {/* Flexible */}
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={isFlexible}
+                onCheckedChange={(checked) => setIsFlexible(!!checked)}
+              />
+              <Label>Flexible Schedule</Label>
+            </div>
+
+            {/* Regular Work Days (buttons) */}
+            <div className="space-y-2">
+              <Label>Regular Work Days</Label>
+              <div className="flex flex-wrap gap-2">
+                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
+                  (day, i) => (
+                    <Button
+                      type="button"
+                      key={day}
+                      variant={regularDays.includes(i) ? "default" : "outline"}
+                      onClick={() => handleDayToggle(i)}
+                    >
+                      {day}
+                    </Button>
+                  )
+                )}
+              </div>
+            </div>
+
             {/* Submit */}
             <div className="flex justify-end">
               <Button type="submit" className="bg-primary hover:bg-primary/90">
@@ -152,7 +231,7 @@ export default function WorkSchedulePage() {
       </Card>
 
       {/* Schedules Table */}
-      <Card className="w-full shadow-lg rounded-2xl">
+      <Card className="w-full shadow-lg rounded-2xl overflow-x-auto">
         <CardHeader>
           <CardTitle className="text-xl font-bold">All Work Schedules</CardTitle>
         </CardHeader>
@@ -160,25 +239,40 @@ export default function WorkSchedulePage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Business</TableHead>
                 <TableHead>Branch</TableHead>
                 <TableHead>Time In</TableHead>
                 <TableHead>Time Out</TableHead>
+                <TableHead>Grace (min)</TableHead>
+                <TableHead>Break (hrs)</TableHead>
+                <TableHead>Min Hours</TableHead>
+                <TableHead>Flexible</TableHead>
+                <TableHead>Regular Days</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {schedules.length > 0 ? (
                 schedules.map((s) => (
                   <TableRow key={s.id}>
-                    <TableCell>{s.business_name || s.business}</TableCell>
                     <TableCell>{s.branch_name || s.branch}</TableCell>
                     <TableCell>{s.time_in}</TableCell>
                     <TableCell>{s.time_out}</TableCell>
+                    <TableCell>{s.grace_minutes}</TableCell>
+                    <TableCell>{s.break_hours}</TableCell>
+                    <TableCell>{s.min_hours_required}</TableCell>
+                    <TableCell>{s.is_flexible ? "Yes" : "No"}</TableCell>
+                    <TableCell>
+                      {s.regular_work_days
+                        ?.split(",")
+                        .map((d: string) =>
+                          ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][Number(d)]
+                        )
+                        .join(", ")}
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
                     No schedules found
                   </TableCell>
                 </TableRow>
