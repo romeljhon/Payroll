@@ -43,6 +43,26 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     router.push('/login');
   };
 
+  useEffect(() => {
+    const pingServer = async () => {
+      try {
+        await fetch("https://payroll-3m6o.onrender.com", { method: "GET" });
+        console.log("Pinged Render server ✅");
+      } catch (err) {
+        console.error("Ping failed ❌", err);
+      }
+    };
+
+    // Ping immediately on mount
+    pingServer();
+
+    // Then ping every 50 seconds
+    const interval = setInterval(pingServer, 50 * 1000);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(interval);
+  }, []);
+  
   if (!mounted) {
     return ( 
       <header className="h-16 flex-shrink-0 border-b border-border bg-card flex items-center justify-between px-6 shadow-sm">
