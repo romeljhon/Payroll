@@ -1,33 +1,36 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   CalendarCheck,
   Calculator,
   Users,
   Send,
-  CalendarPlus,
   Briefcase,
   Network,
   GitBranch,
-  Layers,
   GitMerge,
   ChevronLeft,
   ChevronRight,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import KazuPaySolutionsLogo from "@/components//icons/payease-logo"
-import { ScrollArea } from "@/components/ui/scroll-area";
-import React, { useState, useEffect } from "react";
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import React, { useState, useEffect } from 'react';
 import {
   Accordion,
   AccordionItem,
   AccordionTrigger,
   AccordionContent,
-} from "@/components/ui/accordion";
-import { Skeleton } from "@/components/ui/skeleton";
+} from '@/components/ui/accordion';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface NavItem {
   href: string;
@@ -37,38 +40,32 @@ interface NavItem {
 
 // Main sidebar items
 const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/organization", label: "Organization", icon: Network },
-  { href: "/dashboard/employees", label: "Employees", icon: Users },
-  { href: "/dashboard/attendance", label: "Attendance", icon: CalendarCheck },
-  { href: "/dashboard/computation", label: "Payroll ", icon: Calculator },
-
-  { href: "/dashboard/payslips/generate", label: "Generate Payslips", icon: Send },
-  { href: "/dashboard/tutorial", label: "View Tutorial", icon: Send },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard/organization', label: 'Organization', icon: Network },
+  { href: '/dashboard/employees', label: 'Employees', icon: Users },
+  { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck },
+  { href: '/dashboard/computation', label: 'Payroll ', icon: Calculator },
+  { href: '/dashboard/payslips/generate', label: 'Generate Payslips', icon: Send },
+  { href: '/dashboard/tutorial', label: 'View Tutorial', icon: Send },
 ];
 
 // Payroll dropdown items
 const payrollSubItems: NavItem[] = [
-  { href: "/dashboard/payroll/config", label: "Payroll Configuration", icon: GitMerge },
-  // { href: "/dashboard/payroll/cycle", label: "Payroll Cycle", icon: Calculator },
-  // { href: "/dashboard/payroll/policy", label: "Payroll Policy", icon: Calculator },
-  // { href: "/dashboard/payroll/holidays", label: "Holidays", icon: CalendarPlus },
-  // { href: "/dashboard/payroll/salary-component", label: "Salary Components", icon: Layers },
-  // { href: "/dashboard/payroll/salary-structure", label: "Salary Structure", icon: GitMerge },
-  { href: "/dashboard/payroll/records", label: "Payroll Records", icon: Calculator },
+  { href: '/dashboard/payroll/config', label: 'Payroll Configuration', icon: GitMerge },
+  { href: '/dashboard/payroll/records', label: 'Payroll Records', icon: Calculator },
 ];
 
 // Organization dropdown items
 const organizationSubItems: NavItem[] = [
-  { href: "/dashboard/organization/business", label: "Business", icon: Briefcase },
-  { href: "/dashboard/organization/branches", label: "Branches", icon: GitBranch },
-  { href: "/dashboard/organization/schedule", label: "Work Schedule", icon: GitBranch },
+  { href: '/dashboard/organization/business', label: 'Business', icon: Briefcase },
+  { href: '/dashboard/organization/branches', label: 'Branches', icon: GitBranch },
+  { href: '/dashboard/organization/schedule', label: 'Work Schedule', icon: GitBranch },
 ];
 
 // Employees dropdown items
 const employeesSubItems: NavItem[] = [
-  { href: "/dashboard/employees/positions", label: "Positions", icon: Briefcase },
-  { href: "/dashboard/employees", label: "All Employees", icon: Users },
+  { href: '/dashboard/employees/positions', label: 'Positions', icon: Briefcase },
+  { href: '/dashboard/employees', label: 'All Employees', icon: Users },
 ];
 
 export default function Sidebar() {
@@ -82,7 +79,7 @@ export default function Sidebar() {
 
   if (!mounted) {
     return (
-      <aside className="w-64 flex-shrink-0 border-r border-sidebar-border bg-sidebar/80 backdrop-blur-md text-sidebar-foreground flex flex-col shadow-lg">
+      <aside className="w-64 flex-shrink-0 border-r border-sidebar-border backdrop-blur-md text-sidebar-foreground flex flex-col shadow-lg">
         <div className="h-16 flex items-center justify-center px-6 border-b border-sidebar-border">
           <Skeleton className="h-8 w-32 bg-muted/50" />
         </div>
@@ -98,236 +95,147 @@ export default function Sidebar() {
   }
 
   return (
-    <aside
-      className={cn(
-        "flex-shrink-0 border-r border-sidebar-border bg-sidebar/80 backdrop-blur-md text-sidebar-foreground flex flex-col shadow-lg transition-all duration-300",
-        collapsed ? "w-16" : "w-64"
-      )}
-    >
-{/* Logo + Collapse Button */}
-<div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
-  {!collapsed && (
-    <Link href="/dashboard" className="flex items-center space-x-2">
-      {/* If it's text-based logo */}
-      <span className="text-xl font-bold text-primary whitespace-nowrap">
-        KazuPay Solutions
-      </span>
+    <TooltipProvider>
+      <aside
+        className={cn(
+          'flex-shrink-0 border-r border-sidebar-border backdrop-blur-md text-sidebar-foreground flex flex-col shadow-lg transition-all duration-300',
+          collapsed ? 'w-16' : 'w-64'
+        )}
+      >
+        {/* Logo + Collapse Button */}
+        <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
+          {!collapsed && (
+            <Link href="/dashboard" className="flex items-center space-x-2">
+              <span className="text-xl font-bold text-primary whitespace-nowrap">
+                KazuPay Solutions
+              </span>
+            </Link>
+          )}
 
-      {/* If it's an SVG/logo component */}
-      {/* <KazuPaySolutionsLogo className="h-8 w-auto text-primary" /> */}
-    </Link>
-  )}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-2 rounded-lg hover:bg-sidebar-hover transition-all duration-200"
+          >
+            {collapsed ? (
+              <ChevronRight className="h-5 w-5" />
+            ) : (
+              <ChevronLeft className="h-5 w-5" />
+            )}
+          </button>
+        </div>
 
-  <button
-    onClick={() => setCollapsed(!collapsed)}
-    className="p-2 rounded-lg hover:bg-sidebar-hover transition-all duration-200"
-  >
-    {collapsed ? (
-      <ChevronRight className="h-5 w-5" />
-    ) : (
-      <ChevronLeft className="h-5 w-5" />
-    )}
-  </button>
-</div>
+        <ScrollArea className="flex-1">
+          <nav className="py-6 px-2 space-y-2">
+            {navItems.map((item) => {
+              const isActive =
+                pathname === item.href ||
+                (item.label === 'Payroll ' &&
+                  (pathname.startsWith('/dashboard/payroll') ||
+                    pathname.startsWith('/dashboard/payslips'))) ||
+                (item.label === 'Organization' &&
+                  pathname.startsWith('/dashboard/organization')) ||
+                (item.label === 'Employees' &&
+                  pathname.startsWith('/dashboard/employees'));
 
+              const renderLink = (isCollapsed: boolean) => {
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    onClick={(e) => {
+                      if (collapsed) e.preventDefault(); // block navigation
+                    }}
+                    className={cn(
+                      'group relative flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200 hover:scale-[1.02]',
+                      isActive
+                        ? 'bg-sidebar-active text-sidebar-active-foreground shadow-md'
+                        : 'hover:bg-sidebar-hover hover:text-sidebar-hover-foreground',
+                      isCollapsed && 'justify-center opacity-70'
+                    )}
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    {isActive && !isCollapsed && (
+                      <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>
+                    )}
+                    <item.icon className="h-5 w-5" />
+                    {!isCollapsed && <span className="font-semibold tracking-wide">{item.label}</span>}
+                  </Link>
+                );
+              };
 
+              if (collapsed) {
+                return (
+                  <Tooltip key={item.label}>
+                    <TooltipTrigger asChild>
+                      {renderLink(true)}
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <p>{item.label}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              }
 
-      <ScrollArea className="flex-1">
-        <nav className="py-6 px-2 space-y-2">
-          {navItems.map((item) => {
-            const isActive =
-              pathname === item.href ||
-              (item.label === "Payroll " &&
-                (pathname.startsWith("/dashboard/payroll") ||
-                  pathname.startsWith("/dashboard/payslips"))) ||
-              (item.label === "Organization" &&
-                pathname.startsWith("/dashboard/organization")) ||
-              (item.label === "Employees" &&
-                pathname.startsWith("/dashboard/employees"));
+              // Accordion Items
+              if (
+                item.label === 'Payroll ' ||
+                item.label === 'Organization' ||
+                item.label === 'Employees'
+              ) {
+                const subItems =
+                  item.label === 'Payroll '
+                    ? payrollSubItems
+                    : item.label === 'Organization'
+                    ? organizationSubItems
+                    : employeesSubItems;
 
-            // Payroll Accordion
-            if (item.label === "Payroll ") {
-              return collapsed ? (
-                <Link
-                  key={item.label}
-                  href="/dashboard/payroll/cycle"
-                  className={cn(
-                    "group relative flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200 hover:scale-[1.02]",
-                    isActive
-                      ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
-                      : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
-                  )}
-                >
-                  {isActive && <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>}
-                  <item.icon className="h-5 w-5" />
-                </Link>
-              ) : (
-                <Accordion type="single" collapsible key={item.label} className="w-full">
-                  <AccordionItem value="payroll" className="border-none">
-                    <AccordionTrigger
-                      className={cn(
-                        "group relative flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 hover:no-underline",
-                        isActive
-                          ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
-                          : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
-                      )}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <item.icon className="h-5 w-5" />
-                        <span className="font-semibold tracking-wide">{item.label}</span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="ml-6 border-l border-sidebar-border py-1 space-y-1">
-                      {payrollSubItems.map((subItem) => (
-                        <Link
-                          key={subItem.label}
-                          href={subItem.href}
-                          className={cn(
-                            "flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-[1.02]",
-                            pathname === subItem.href
-                              ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
-                              : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
-                          )}
-                        >
-                          <subItem.icon className="h-4 w-4" />
-                          <span>{subItem.label}</span>
-                        </Link>
-                      ))}
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              );
-            }
+                return (
+                  <Accordion type="single" collapsible key={item.label} className="w-full">
+                    <AccordionItem value={item.label.toLowerCase()} className="border-none">
+                      <AccordionTrigger
+                        className={cn(
+                          'group relative flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 hover:no-underline',
+                          isActive
+                            ? 'bg-sidebar-active text-sidebar-active-foreground shadow-md'
+                            : 'hover:bg-sidebar-hover hover:text-sidebar-hover-foreground'
+                        )}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <item.icon className="h-5 w-5" />
+                          <span className="font-semibold tracking-wide">{item.label}</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="ml-6 border-l border-sidebar-border py-1 space-y-1">
+                        {subItems.map((subItem) => (
+                          <Link
+                            key={subItem.label}
+                            href={subItem.href}
+                            onClick={(e) => {
+                              if (collapsed) e.preventDefault();
+                            }}
+                            className={cn(
+                              'flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-[1.02]',
+                              pathname === subItem.href
+                                ? 'bg-sidebar-active text-sidebar-active-foreground shadow-md'
+                                : 'hover:bg-sidebar-hover hover:text-sidebar-hover-foreground'
+                            )}
+                          >
+                            <subItem.icon className="h-4 w-4" />
+                            <span>{subItem.label}</span>
+                          </Link>
+                        ))}
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                );
+              }
 
-            // Organization Accordion
-            if (item.label === "Organization") {
-              return collapsed ? (
-                <Link
-                  key={item.label}
-                  href="/dashboard/organization/branches"
-                  className={cn(
-                    "group relative flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200 hover:scale-[1.02]",
-                    isActive
-                      ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
-                      : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
-                  )}
-                >
-                  {isActive && <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>}
-                  <item.icon className="h-5 w-5" />
-                </Link>
-              ) : (
-                <Accordion type="single" collapsible key={item.label} className="w-full">
-                  <AccordionItem value="org" className="border-none">
-                    <AccordionTrigger
-                      className={cn(
-                        "group relative flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 hover:no-underline",
-                        isActive
-                          ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
-                          : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
-                      )}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <item.icon className="h-5 w-5" />
-                        <span className="font-semibold tracking-wide">{item.label}</span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="ml-6 border-l border-sidebar-border py-1 space-y-1">
-                      {organizationSubItems.map((subItem) => (
-                        <Link
-                          key={subItem.label}
-                          href={subItem.href}
-                          className={cn(
-                            "flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-[1.02]",
-                            pathname === subItem.href
-                              ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
-                              : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
-                          )}
-                        >
-                          <subItem.icon className="h-4 w-4" />
-                          <span>{subItem.label}</span>
-                        </Link>
-                      ))}
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              );
-            }
-
-            // Employees Accordion
-            if (item.label === "Employees") {
-              return collapsed ? (
-                <Link
-                  key={item.label}
-                  href="/dashboard/employees"
-                  className={cn(
-                    "group relative flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200 hover:scale-[1.02]",
-                    isActive
-                      ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
-                      : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
-                  )}
-                >
-                  {isActive && <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>}
-                  <item.icon className="h-5 w-5" />
-                </Link>
-              ) : (
-                <Accordion type="single" collapsible key={item.label} className="w-full">
-                  <AccordionItem value="employees" className="border-none">
-                    <AccordionTrigger
-                      className={cn(
-                        "group relative flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 hover:no-underline",
-                        isActive
-                          ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
-                          : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
-                      )}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <item.icon className="h-5 w-5" />
-                        <span className="font-semibold tracking-wide">{item.label}</span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="ml-6 border-l border-sidebar-border py-1 space-y-1">
-                      {employeesSubItems.map((subItem) => (
-                        <Link
-                          key={subItem.label}
-                          href={subItem.href}
-                          className={cn(
-                            "flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-[1.02]",
-                            pathname === subItem.href
-                              ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
-                              : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
-                          )}
-                        >
-                          <subItem.icon className="h-4 w-4" />
-                          <span>{subItem.label}</span>
-                        </Link>
-                      ))}
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              );
-            }
-
-            // Regular Links
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={cn(
-                  "group relative flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200 hover:scale-[1.02]",
-                  isActive
-                    ? "bg-sidebar-active text-sidebar-active-foreground shadow-md"
-                    : "hover:bg-sidebar-hover hover:text-sidebar-hover-foreground"
-                )}
-                aria-current={isActive ? "page" : undefined}
-              >
-                {isActive && <span className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-primary"></span>}
-                <item.icon className="h-5 w-5" />
-                {!collapsed && <span className="font-semibold tracking-wide">{item.label}</span>}
-              </Link>
-            );
-          })}
-        </nav>
-      </ScrollArea>
-    </aside>
+              // Regular Links
+              return renderLink(false);
+            })}
+          </nav>
+        </ScrollArea>
+      </aside>
+    </TooltipProvider>
   );
 }

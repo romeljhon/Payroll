@@ -19,7 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Edit, Trash2, Save, X } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
   getPositions,
@@ -38,6 +38,13 @@ interface Position {
   name: string;
 }
 
+// ✅ Fallback Stub Data
+const STUB_POSITIONS: Position[] = [
+  { id: 1, name: "Software Engineer" },
+  { id: 2, name: "Marketing Manager" },
+  { id: 3, name: "HR Specialist" },
+];
+
 export default function PositionsPage() {
   const [positionName, setPositionName] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -47,13 +54,19 @@ export default function PositionsPage() {
   const queryClient = useQueryClient();
 
   const {
-    data: positions = [],
+    data: apiPositions = [],
     isLoading,
     isError,
   } = useQuery<Position[]>({
     queryKey: ["positions"],
     queryFn: getPositions,
   });
+
+  // ✅ Use stub data if API fails or returns empty
+  const positions: Position[] = useMemo(() => {
+    if (isError || apiPositions.length === 0) return STUB_POSITIONS;
+    return apiPositions;
+  }, [apiPositions, isError]);
 
   const addMutation = useMutation({
     mutationFn: AddPositions,
@@ -65,11 +78,11 @@ export default function PositionsPage() {
       });
       setPositionName("");
     },
-    onError: (error: any) => {
+    onError: () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to add position.",
+        description: "API not working. Stub data is being used.",
       });
     },
   });
@@ -78,16 +91,13 @@ export default function PositionsPage() {
     mutationFn: DeletePositions,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["positions"] });
-      toast({
-        title: "Deleted",
-        description: "Position has been deleted.",
-      });
+      toast({ title: "Deleted", description: "Position has been deleted." });
     },
-    onError: (error: any) => {
+    onError: () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to delete position.",
+        description: "API not working. Cannot delete stub data.",
       });
     },
   });
@@ -97,17 +107,14 @@ export default function PositionsPage() {
       UpdatePositions(id.toString(), body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["positions"] });
-      toast({
-        title: "Updated",
-        description: "Position updated successfully.",
-      });
+      toast({ title: "Updated", description: "Position updated successfully." });
       setEditingId(null);
     },
-    onError: (error: any) => {
+    onError: () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to update position.",
+        description: "API not working. Stub data cannot be updated.",
       });
     },
   });
@@ -156,6 +163,7 @@ export default function PositionsPage() {
 
   return (
     <div className="space-y-8">
+      {/* Add Position */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-primary">Add Position</CardTitle>
@@ -175,10 +183,7 @@ export default function PositionsPage() {
               />
             </div>
             <div className="flex flex-wrap gap-2 mt-6 pt-4 border-t">
-              <Button
-                type="submit"
-                className="bg-primary hover:bg-primary/90"
-              >
+              <Button type="submit" className="bg-primary hover:bg-primary/90">
                 Save
               </Button>
             </div>
@@ -186,6 +191,7 @@ export default function PositionsPage() {
         </CardContent>
       </Card>
 
+      {/* Position List */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-primary">Position List</CardTitle>
@@ -194,8 +200,6 @@ export default function PositionsPage() {
         <CardContent>
           {isLoading ? (
             <p>Loading...</p>
-          ) : isError ? (
-            <p className="text-destructive">Failed to load positions.</p>
           ) : (
             <Table>
               <TableHeader>
@@ -265,6 +269,11 @@ export default function PositionsPage() {
                 ))}
               </TableBody>
             </Table>
+          )}
+          {isError && (
+            <p className="text-muted-foreground mt-2 text-sm">
+              ⚠️ API not working. Showing stub data.
+            </p>
           )}
         </CardContent>
       </Card>

@@ -8,47 +8,47 @@ body {
 
 @layer base {
   :root {
-    --background: 220 13% 95%; /* Light gray #F0F2F5 */
-    --foreground: 222 44% 21%; /* Darker text for contrast */
+    --background: 220 13% 98%; /* Lighter gray for a cleaner look */
+    --foreground: 222 44% 18%; /* Darker text for better readability */
 
-    --muted: 220 10% 90%;
-    --muted-foreground: 220 7% 45%;
+    --muted: 220 10% 92%;
+    --muted-foreground: 220 7% 55%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 44% 21%;
+    --popover-foreground: 222 44% 18%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 44% 21%;
+    --card-foreground: 222 44% 18%;
 
-    --border: 220 10% 85%;
-    --input: 220 10% 88%;
+    --border: 220 10% 90%;
+    --input: 220 10% 92%;
 
-    --primary: 222 44% 41%; /* Navy blue #3B5998 */
-    --primary-foreground: 0 0% 98%; /* White */
+    --primary: 222 44% 45%; /* A slightly softer navy blue */
+    --primary-foreground: 0 0% 100%; /* White */
 
-    --secondary: 220 10% 90%; /* A slightly darker gray for secondary elements */
-    --secondary-foreground: 222 44% 31%;
+    --secondary: 220 10% 92%; /* A lighter gray for secondary elements */
+    --secondary-foreground: 222 44% 28%;
 
-    --accent: 203 82% 61%; /* Sky blue #55ACEE */
+    --accent: 203 82% 55%; /* A more vibrant sky blue */
     --accent-foreground: 0 0% 100%; /* White */
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --ring: 203 82% 61%; /* Accent color for rings */
+    --ring: 203 82% 55%; /* Accent color for rings */
 
     --radius: 0.5rem;
 
-    /* Custom Sidebar Variables for a Light Theme */
-    --sidebar-background: 0 0% 100%; /* White sidebar background */
-    --sidebar-foreground: 222 44% 41%; /* Navy text on sidebar */
-    --sidebar-border: 220 10% 88%; /* Light gray border for sidebar */
+    /* Updated Sidebar Variables for Light Theme */
+    --sidebar-background: 0 0% 100%; /* White sidebar */
+    --sidebar-foreground: 222 44% 12%; /* Even darker text for sidebar */
+    --sidebar-border: 220 10% 90%; /* Light gray border */
     
-    --sidebar-active-background: 203 82% 61%; /* Sky blue for active item background */
-    --sidebar-active-foreground: 0 0% 100%; /* White text for active item */
+    --sidebar-active-background: 203 82% 55%; /* Vibrant sky blue for active item */
+    --sidebar-active-foreground: 0 0% 100%; /* White text on active item */
     
-    --sidebar-hover-background: 220 13% 92%; /* Very light gray for hover background */
-    --sidebar-hover-foreground: 222 44% 41%; /* Navy text for hover item */
+    --sidebar-hover-background: 220 13% 95%; /* Light gray for hover */
+    --sidebar-hover-foreground: 222 44% 12%; /* Dark text on hover */
 
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -58,45 +58,45 @@ body {
   }
 
   .dark {
-    --background: 222 44% 15%; /* Dark navy */
-    --foreground: 0 0% 95%; /* Light gray text */
+    --background: 222 44% 12%; /* Deeper navy for dark mode */
+    --foreground: 0 0% 98%; /* Off-white text */
 
-    --muted: 222 40% 25%;
-    --muted-foreground: 220 10% 65%;
+    --muted: 222 40% 22%;
+    --muted-foreground: 220 10% 75%;
 
-    --popover: 222 44% 10%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 222 44% 8%;
+    --popover-foreground: 0 0% 98%;
 
-    --card: 222 44% 10%;
-    --card-foreground: 0 0% 95%;
+    --card: 222 44% 8%;
+    --card-foreground: 0 0% 98%;
 
-    --border: 222 40% 30%;
-    --input: 222 40% 30%;
+    --border: 222 40% 25%;
+    --input: 222 40% 25%;
 
-    --primary: 203 82% 61%; /* Sky blue for primary in dark mode */
-    --primary-foreground: 222 44% 15%; /* Dark navy text on sky blue */
+    --primary: 203 82% 58%; /* A slightly brighter sky blue for dark mode */
+    --primary-foreground: 222 44% 12%; /* Deep navy text on sky blue */
 
-    --secondary: 222 40% 25%;
-    --secondary-foreground: 0 0% 95%;
+    --secondary: 222 40% 22%;
+    --secondary-foreground: 0 0% 98%;
 
-    --accent: 222 44% 41%; /* Navy blue for accent in dark mode */
+    --accent: 222 44% 35%; /* A softer navy blue for accent in dark mode */
     --accent-foreground: 0 0% 98%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
-    --ring: 203 82% 51%;
+    --ring: 203 82% 55%;
 
-    /* Custom Sidebar Variables for Dark Theme */
-    --sidebar-background: 222 44% 10%; /* Very dark navy */
-    --sidebar-foreground: 0 0% 90%; /* Light gray text */
-    --sidebar-border: 222 40% 20%;
+    /* Updated Sidebar Variables for Dark Theme */
+    --sidebar-background: 222 44% 8%; /* Very dark navy */
+    --sidebar-foreground: 0 0% 98%; /* Off-white text */
+    --sidebar-border: 222 40% 18%;
     
-    --sidebar-active-background: 203 82% 61%; /* Sky blue */
-    --sidebar-active-foreground: 222 44% 10%; /* Dark text */
+    --sidebar-active-background: 203 82% 58%; /* Bright sky blue */
+    --sidebar-active-foreground: 222 44% 8%; /* Very dark navy text */
     
-    --sidebar-hover-background: 222 40% 20%;
-    --sidebar-hover-foreground: 0 0% 90%;
+    --sidebar-hover-background: 222 40% 18%;
+    --sidebar-hover-foreground: 0 0% 98%; /* Off-white text */
 
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -114,5 +114,15 @@ body {
     @apply bg-background text-foreground;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+  
+  .dark body {
+    background: linear-gradient(to bottom right, hsl(222, 44%, 12%), hsl(260, 30%, 20%));
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-card/50 backdrop-blur-lg border border-border/20 rounded-lg shadow-lg;
   }
 }

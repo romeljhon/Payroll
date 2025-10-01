@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ReactQueryProvider } from '@/lib/react-query-provider';
+import Aurora from '@/components/auth/Aurora';
 
 export const metadata: Metadata = {
   title: 'KazuPay Solutions  - Payroll Management System',
@@ -29,6 +30,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <ReactQueryProvider> {/* ✅ wrap here */}
+            <Aurora />
             {children}
             <Toaster />
           </ReactQueryProvider>

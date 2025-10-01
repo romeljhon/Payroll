@@ -40,7 +40,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-primary">Total Employees</CardTitle>
             <Users className="h-5 w-5 text-muted-foreground" />
@@ -50,7 +50,7 @@ export default function DashboardPage() {
             <p className="text-xs text-muted-foreground">+5 since last month</p>
           </CardContent>
         </Card>
-        <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-primary">Payroll This Month</CardTitle>
             <Banknote className="h-5 w-5 text-muted-foreground" />
@@ -60,7 +60,7 @@ export default function DashboardPage() {
             <p className="text-xs text-muted-foreground">Estimated for June</p>
           </CardContent>
         </Card>
-        <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-primary">Payslips Generated</CardTitle>
             <FileText className="h-5 w-5 text-muted-foreground" />
@@ -70,7 +70,7 @@ export default function DashboardPage() {
             <p className="text-xs text-muted-foreground">For May payroll period</p>
           </CardContent>
         </Card>
-        <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 border-destructive/50 bg-destructive/5">
+        <Card className="glass-card border-destructive/50 bg-destructive/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-destructive">Pending Actions</CardTitle>
             <AlertTriangle className="h-5 w-5 text-destructive" />
@@ -83,7 +83,7 @@ export default function DashboardPage() {
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="shadow-lg">
+        <Card className="glass-card">
           <CardHeader>
             <CardTitle className="text-primary flex items-center">
               <LineChart className="h-5 w-5 mr-2 text-accent" />
@@ -103,7 +103,7 @@ export default function DashboardPage() {
             </ChartContainer>
           </CardContent>
         </Card>
-         <Card className="shadow-lg">
+         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="text-primary flex items-center">
               <PieChartIcon className="h-5 w-5 mr-2 text-accent" />
@@ -127,7 +127,7 @@ export default function DashboardPage() {
       </section>
 
       <section>
-        <Card className="shadow-lg">
+        <Card className="glass-card">
           <CardHeader>
             <CardTitle className="text-primary flex items-center">
                 <BarChart className="h-5 w-5 mr-2 text-accent" />

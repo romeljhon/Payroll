@@ -7,6 +7,7 @@ import Sidebar from '@/components/layout/sidebar';
 import Header from '@/components/layout/header';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import OnboardingDialog from '@/components/onboarding/onboarding-dialog';
+import Aurora from '@/components/auth/Aurora';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -34,7 +35,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-screen overflow-hidden">
+      <Aurora />
       {/* Desktop Sidebar */}
       <div className="hidden md:flex">
         <Sidebar />
@@ -52,7 +54,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header onMenuToggle={toggleMobileMenu} />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background p-6 md:p-8">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto p-6 md:p-8">
           <div className="animate-in fade-in duration-300">
             {children}
           </div>

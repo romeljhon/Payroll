@@ -9,14 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -46,8 +38,38 @@ export interface Employee {
   hire_date: string;
   active: boolean;
   branch: number;
-  salary_rate:any
+  salary_rate: any;
 }
+
+// ✅ Stub data if API fails
+const stubEmployees: Employee[] = [
+  {
+    id: 1,
+    branch_name: "Main Branch",
+    position: "Manager",
+    first_name: "Alice",
+    last_name: "Johnson",
+    email: "alice.johnson@example.com",
+    phone: "09171234567",
+    hire_date: "2024-06-01",
+    active: true,
+    branch: 101,
+    salary_rate: 50000,
+  },
+  {
+    id: 2,
+    branch_name: "Cebu Branch",
+    position: "Sales Associate",
+    first_name: "Bob",
+    last_name: "Reyes",
+    email: "bob.reyes@example.com",
+    phone: "09179876543",
+    hire_date: "2024-08-12",
+    active: false,
+    branch: 102,
+    salary_rate: 25000,
+  },
+];
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -62,10 +84,12 @@ export default function EmployeesPage() {
         const employees = await getAllEmployee();
         setEmployees(employees);
       } catch (err: any) {
+        setEmployees(stubEmployees);
         toast({
           variant: "destructive",
-          title: "Fetch Error",
-          description: err.message || "Could not load employee data.",
+          title: "Using Sample Data",
+          description:
+            "The server is unreachable. Showing sample employees instead.",
         });
       }
     }
@@ -91,7 +115,7 @@ export default function EmployeesPage() {
   };
 
   const handleDelete = async (id: number) => {
-    setSelectedId(id); // ✅ store the selected id in state
+    setSelectedId(id);
     MySwal.fire({
       title: "Are you sure?",
       text: "This action cannot be undone!",
@@ -123,36 +147,39 @@ export default function EmployeesPage() {
             "error"
           );
         } finally {
-          setSelectedId(null); // ✅ clear after done
+          setSelectedId(null);
         }
       } else {
-        setSelectedId(null); // ✅ clear if cancelled
+        setSelectedId(null);
       }
     });
   };
 
   return (
     <div className="space-y-8 mx-auto max-w-7xl px-4 md:px-0">
-      <Card className="shadow-lg">
+      <Card className="shadow-lg dark:bg-gray-900 dark:text-gray-100">
         <CardHeader className="flex flex-col md:flex-row justify-between md:items-center gap-4">
           <div>
             <CardTitle className="text-primary">Employee Management</CardTitle>
-            <CardDescription>
+            <CardDescription className="dark:text-gray-400">
               View, add, and manage employee information.
             </CardDescription>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
             <div className="relative flex-grow">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground dark:text-gray-400" />
               <Input
                 placeholder="Search employees..."
-                className="pl-10 w-full"
+                className="pl-10 w-full dark:bg-gray-800 dark:border-gray-700"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" className="flex-grow sm:flex-grow-0">
+              <Button
+                variant="outline"
+                className="flex-grow sm:flex-grow-0 dark:border-gray-700 dark:text-gray-100"
+              >
                 <Filter className="mr-2 h-4 w-4" /> Filter
               </Button>
               <Button
@@ -165,86 +192,88 @@ export default function EmployeesPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Position</TableHead>
-                  <TableHead>Branch</TableHead>
-                  <TableHead>Hire Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredEmployees.map((employee) => (
-                  <TableRow
-                    key={employee.id}
-                    className="hover:bg-muted/20 transition-colors"
-                  >
-                    <TableCell>
-                      {employee.first_name} {employee.last_name}
-                    </TableCell>
-                    <TableCell>{employee.email}</TableCell>
-                    <TableCell>{employee.phone}</TableCell>
-                    <TableCell>{employee.position}</TableCell>
-                    <TableCell>{employee.branch_name}</TableCell>
-                    <TableCell>{employee.hire_date}</TableCell>
-                    <TableCell>
-                      <Badge variant={employee.active ? "default" : "outline"}>
-                        {employee.active ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link
-                              href={`/dashboard/employees/${employee.id}`}
-                              className="flex items-center w-full"
-                            >
-                              <Eye className="mr-2 h-4 w-4" /> View Details
-                            </Link>
-                          </DropdownMenuItem>
-
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(employee.id)}
-                            className="text-red-600 focus:text-red-600"
-                            // Optional: visually indicate “busy” for this row
-                            disabled={selectedId === employee.id}
+          {filteredEmployees.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredEmployees.map((employee) => (
+                <Card
+                  key={employee.id}
+                  className="relative shadow-md dark:bg-gray-800 dark:text-gray-100"
+                >
+                  {/* Three dots menu in top right */}
+                  <div className="absolute top-2 right-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-full"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        className="dark:bg-gray-800 dark:border-gray-700"
+                      >
+                        <DropdownMenuItem asChild>
+                          <Link
+                            href={`/dashboard/employees/${employee.id}`}
+                            className="flex items-center w-full"
                           >
-                            {selectedId === employee.id
-                              ? "⏳ Deleting..."
-                              : "🗑️ Delete"}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredEmployees.length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={8}
-                      className="text-center py-10 text-muted-foreground"
+                            <Eye className="mr-2 h-4 w-4" /> View Details
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(employee.id)}
+                          className="text-red-600 focus:text-red-600"
+                          disabled={selectedId === employee.id}
+                        >
+                          {selectedId === employee.id
+                            ? "⏳ Deleting..."
+                            : "🗑️ Delete"}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  <CardHeader>
+                    <CardTitle>
+                      {employee.first_name} {employee.last_name}
+                      
+                    </CardTitle>
+                    <CardDescription>{employee.position}   <Badge
+                      variant={employee.active ? "default" : "outline"}
+                      className="dark:border-gray-500"
                     >
-                      No employees found matching your criteria.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                      {employee.active ? "Active" : "Inactive"}
+                    </Badge></CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <p>
+                      <strong>Email:</strong> {employee.email}
+                    </p>
+                    <p>
+                      <strong>Phone:</strong> {employee.phone}
+                    </p>
+                    <p>
+                      <strong>Branch:</strong> {employee.branch_name}
+                    </p>
+                    <p>
+                      <strong>Hire Date:</strong> {employee.hire_date}
+                    </p>
+                  
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center py-10 text-muted-foreground dark:text-gray-400">
+              No employees found matching your criteria.
+            </p>
+          )}
         </CardContent>
       </Card>
+
       <AddEmployeeDialog
         isOpen={isAddEmployeeDialogOpen}
         onOpenChange={setIsAddEmployeeDialogOpen}

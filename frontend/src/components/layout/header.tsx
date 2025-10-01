@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useRouter } from "next/navigation";
-import { ChevronDown, UserCircle, Sun, Moon, Menu } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useRouter } from 'next/navigation';
+import { ChevronDown, UserCircle, Sun, Moon, Menu } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,17 +10,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import Link from "next/link";
-import { useState, useEffect } from "react";
-import { useTheme } from "next-themes";
+} from '@/components/ui/dropdown-menu';
+import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { useTheme } from 'next-themes';
 
 interface HeaderProps {
   onMenuToggle: () => void;
 }
 
 export default function Header({ onMenuToggle }: HeaderProps) {
-  const [userName, setUserName] = useState("User");
+  const [userName, setUserName] = useState('User');
   const router = useRouter();
   const { setTheme, theme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -30,7 +30,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     if (typeof window !== 'undefined') {
       const storedEmail = localStorage.getItem('userEmail');
       if (storedEmail) {
-        setUserName(storedEmail.split('@')[0] || "User");
+        setUserName(storedEmail.split('@')[0] || 'User');
       }
     }
   }, []);
@@ -43,29 +43,9 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     router.push('/login');
   };
 
-  useEffect(() => {
-    const pingServer = async () => {
-      try {
-        await fetch("https://payroll-3m6o.onrender.com", { method: "GET" });
-        console.log("Pinged Render server ✅");
-      } catch (err) {
-        console.error("Ping failed ❌", err);
-      }
-    };
-
-    // Ping immediately on mount
-    pingServer();
-
-    // Then ping every 50 seconds
-    const interval = setInterval(pingServer, 50 * 1000);
-
-    // Cleanup interval on unmount
-    return () => clearInterval(interval);
-  }, []);
-  
   if (!mounted) {
-    return ( 
-      <header className="h-16 flex-shrink-0 border-b border-border bg-card flex items-center justify-between px-6 shadow-sm">
+    return (
+      <header className="h-16 flex-shrink-0 border-b border-border flex items-center justify-between px-6 shadow-sm backdrop-blur-md">
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 bg-muted rounded-md animate-pulse md:hidden"></div>
         </div>
@@ -81,12 +61,12 @@ export default function Header({ onMenuToggle }: HeaderProps) {
   }
 
   return (
-    <header className="h-16 flex-shrink-0 border-b border-border bg-card flex items-center justify-between px-6 shadow-sm">
+    <header className="h-16 flex-shrink-0 border-b border-border flex items-center justify-between px-6 shadow-sm backdrop-blur-md">
       <div className="flex items-center gap-2 sm:gap-4">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="md:hidden text-muted-foreground hover:text-foreground" 
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden text-muted-foreground hover:text-foreground"
           onClick={onMenuToggle}
           aria-label="Toggle menu"
         >
@@ -97,7 +77,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
           className="rounded-full text-muted-foreground hover:text-foreground"
           aria-label="Toggle theme"
         >

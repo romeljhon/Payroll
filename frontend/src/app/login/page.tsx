@@ -6,26 +6,26 @@ import KazuPaySolutionsLogo from "@/components/icons/payease-logo";
 import Link from "next/link";
 
 export default function LoginPage() {
-  useEffect(() => {
-    const pingServer = async () => {
-      try {
-        await fetch("https://payroll-3m6o.onrender.com", { method: "GET" });
-        console.log("Pinged Render server ✅");
-      } catch (err) {
-        console.error("Ping failed ❌", err);
-      }
-    };
+  // useEffect(() => {
+  //   const pingServer = async () => {
+  //     try {
+  //       await fetch("https://payroll-3m6o.onrender.com", { method: "GET" });
+  //       console.log("Pinged Render server ✅");
+  //     } catch (err) {
+  //       console.error("Ping failed ❌", err);
+  //     }
+  //   };
 
-    // run only if we are on LoginPage
-    pingServer(); // immediate ping
+  //   // run only if we are on LoginPage
+  //   pingServer(); // immediate ping
 
-    const interval = setInterval(pingServer, 50 * 1000);
+  //   const interval = setInterval(pingServer, 50 * 1000);
 
-    return () => clearInterval(interval); // stop when leaving login page
-  }, []);
+  //   return () => clearInterval(interval); // stop when leaving login page
+  // }, []);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-background to-secondary/30 p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <Link href="/" className="inline-block">
