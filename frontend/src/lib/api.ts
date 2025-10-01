@@ -148,6 +148,27 @@ export async function getAllEmployeeById(id: any) {
 
   return data; // this is the employee list
 }
+// GET EMPLOYEE BY BRANCH 
+export async function getAllEmployeeByBranch(id: any) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + `/api/employees/by-branch/${id}/`, {
+    method: "GET",
+    headers: {
+      Authorization: `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to fetch employees");
+  }
+
+  return data; // this is the employee list
+}
 // ADD EMPLOYEE
 export async function AddEmployee(body: any) {
   const token = localStorage.getItem("token");
@@ -324,6 +345,30 @@ export async function getBranches() {
 
   const res = await fetch(
     process.env.NEXT_PUBLIC_API_BASE_URL + "/api/branches/",
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Token ${token}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to fetch employees");
+  }
+
+  return data; // this is the employee list
+}
+// GET ALLBRANCHES BY ALL BUSINESS 
+export async function getAllBranchesByBusiness() {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/branches/by-business/",
     {
       method: "GET",
       headers: {
@@ -553,6 +598,45 @@ export async function getTimekeeping() {
   }
   return data;
 }
+// GET TIMEKEEPING HISTORY BY BUSINESS + BRANCH (+ optional employee)
+export async function getTimekeepingByBusinessBranch(
+  businessId: number,
+  branchId: number,
+  employeeId?: number
+) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (!base) throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured");
+
+  const query = new URLSearchParams({
+    business_id: String(businessId),
+    branch_id: String(branchId),
+    ...(employeeId ? { employee_id: String(employeeId) } : {}),
+  });
+
+  const res = await fetch(`${base}/api/timekeeping/by-business-branch/?${query}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+    cache: "no-store",
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(
+      data.detail ||
+        data.error ||
+        JSON.stringify(data) ||
+        "Failed to fetch timelogs by business/branch"
+    );
+  }
+  return data;
+}
+
 // ADD Timekeeping
 export async function AddTimekeeping(body: any) {
   const token = localStorage.getItem("token");

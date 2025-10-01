@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import LoginForm from "@/components/auth/login-form";
 import KazuPaySolutionsLogo from "@/components/icons/payease-logo";
 import Link from "next/link";
+import Aurora from "@/components/auth/Aurora";
 
 export default function LoginPage() {
   // useEffect(() => {
@@ -26,6 +27,8 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4">
+      <Aurora/>
+
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <Link href="/" className="inline-block">

@@ -1,22 +1,27 @@
-from rest_framework import viewsets
-from timekeeping.models import TimeLog, Holiday
-from timekeeping.serializers import TimeLogSerializer, HolidaySerializer, TimeLogImportSerializer
-from drf_spectacular.utils import extend_schema
+from rest_framework import viewsets, permissions, filters, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.decorators import action
+from drf_spectacular.utils import extend_schema
 from django.db import transaction
-from rest_framework import viewsets, permissions, filters, status
+from django_filters.rest_framework import DjangoFilterBackend
+from datetime import date
+
+from timekeeping.models import TimeLog, Holiday
+from timekeeping.serializers import (
+    TimeLogSerializer,
+    HolidaySerializer,
+    TimeLogImportSerializer,
+)
 from common.constants import PH_DEFAULT_MULTIPLIERS
 from common.filters import HolidayFilter
 from common.utils_ph_holidays import get_ph_recurring_holidays
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.decorators import action 
-from datetime import date
-
 from timekeeping.importers.timelog_importer import ImportOptions, import_timelogs
 
 
-# Create your views here.
+# ------------------------------
+# TimeLog CRUD + Attendance Filters
+# ------------------------------
 @extend_schema(tags=["Timekeeping"])
 class TimeLogViewSet(viewsets.ModelViewSet):
     queryset = TimeLog.objects.all()
@@ -24,26 +29,54 @@ class TimeLogViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        employee_id = self.request.query_params.get('employee_id')
-        month_param = self.request.query_params.get('month')  # Expected: YYYY-MM
+        employee_id = self.request.query_params.get("employee_id")
+        month_param = self.request.query_params.get("month")  # Expected: YYYY-MM
 
         if employee_id:
             qs = qs.filter(employee_id=employee_id)
 
         if month_param:
             try:
-                year, month_num = map(int, month_param.split('-'))
+                year, month_num = map(int, month_param.split("-"))
                 if 1 <= month_num <= 12:
                     qs = qs.filter(date__year=year, date__month=month_num)
             except (ValueError, AttributeError):
-                # If month format is invalid, just ignore it
                 pass
 
-        return qs.order_by('-date')
-    
+        return qs.order_by("-date")
+
+    # 🔹 New endpoint: filter attendance history by business + branch + employee
+    @action(detail=False, methods=["get"], url_path="by-business-branch")
+    def by_business_branch(self, request):
+        """
+        Filter TimeLogs by employee + branch + business
+        Example:
+          GET /api/timelogs/by-business-branch/?employee_id=1&branch_id=2&business_id=3
+        """
+        employee_id = request.query_params.get("employee_id")
+        branch_id = request.query_params.get("branch_id")
+        business_id = request.query_params.get("business_id")
+
+        qs = self.get_queryset()
+
+        if employee_id:
+            qs = qs.filter(employee_id=employee_id)
+
+        if branch_id:
+            qs = qs.filter(employee__branch_id=branch_id)
+
+        if business_id:
+            qs = qs.filter(employee__branch__business_id=business_id)
+
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# ------------------------------
+# Bulk Upload TimeLogs
+# ------------------------------
 @extend_schema(tags=["Timekeeping"])
 class BulkTimeLogUploadView(APIView):
-
     def post(self, request):
         logs = request.data.get("logs", None)
         if not isinstance(logs, list):
@@ -52,7 +85,9 @@ class BulkTimeLogUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        serializer = TimeLogSerializer(data=logs, many=True, context={"request": request})
+        serializer = TimeLogSerializer(
+            data=logs, many=True, context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
 
         # All-or-nothing write for consistency
@@ -66,7 +101,12 @@ class BulkTimeLogUploadView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
-@extend_schema(tags=["Timekeeping"])    
+
+
+# ------------------------------
+# Holiday API
+# ------------------------------
+@extend_schema(tags=["Timekeeping"])
 class HolidayViewSet(viewsets.ModelViewSet):
     """
     Philippines-only Holiday API
@@ -77,6 +117,7 @@ class HolidayViewSet(viewsets.ModelViewSet):
       - GET  /holidays/on/YYYY-MM-DD/
       - POST /holidays/seed_ph/<year>/
     """
+
     queryset = Holiday.objects.all().order_by("date")
     serializer_class = HolidaySerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
@@ -102,7 +143,9 @@ class HolidayViewSet(viewsets.ModelViewSet):
         try:
             target = date.fromisoformat(day)
         except ValueError:
-            return Response({"detail": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+            return Response(
+                {"detail": "Invalid date format. Use YYYY-MM-DD."}, status=400
+            )
         qs = self.get_queryset().filter(date=target)
         if not qs.exists():
             return Response({"is_holiday": False, "holiday": None})
@@ -150,7 +193,11 @@ class HolidayViewSet(viewsets.ModelViewSet):
             {"year": year, "created_dates": created, "skipped_existing_dates": skipped},
             status=status.HTTP_201_CREATED,
         )
-    
+
+
+# ------------------------------
+# Import TimeLogs from file
+# ------------------------------
 class TimeLogImportView(APIView):
     # permission_classes = [permissions.IsAuthenticated]
 
@@ -171,7 +218,9 @@ class TimeLogImportView(APIView):
 
         return Response(
             {
-                "message": "Dry run complete." if opts.dry_run else "Import complete.",
+                "message": "Dry run complete."
+                if opts.dry_run
+                else "Import complete.",
                 "summary": {
                     "total_rows": result.total_rows,
                     "created": result.created,

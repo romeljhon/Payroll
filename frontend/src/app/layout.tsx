@@ -30,7 +30,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <ReactQueryProvider> {/* ✅ wrap here */}
-            <Aurora />
+            {/* <Aurora /> */}
             {children}
             <Toaster />
           </ReactQueryProvider>

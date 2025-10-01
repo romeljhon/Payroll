@@ -20,7 +20,14 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         if branch_id:
             queryset = queryset.filter(branch_id=branch_id)
         return queryset
-
+    
+    @action(detail=False, methods=["get"], url_path="by-branch/(?P<branch_id>[^/.]+)")
+    def by_branch(self, request, branch_id=None):
+        """
+        GET /employees/by-branch/{branch_id}/
+        """
+        employees = self.queryset.filter(branch_id=branch_id)
+        return Response(EmployeeSerializer(employees, many=True).data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["post"], url_path="create-with-rate")
     def create_with_rate(self, request):

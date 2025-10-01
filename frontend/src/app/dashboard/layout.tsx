@@ -36,7 +36,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Aurora />
+      {/* <Aurora /> */}
       {/* Desktop Sidebar */}
       <div className="hidden md:flex">
         <Sidebar />
