@@ -66,10 +66,10 @@ const LandingPage = () => {
 
       <main className="pt-20">
         {/* Hero Section */}
-        <section className="relative py-32 md:py-48 flex items-center justify-center text-center">
+        <section className="relative py-20 sm:py-32 md:py-48 flex items-center justify-center text-center">
           <div className="relative z-10 px-4 container mx-auto">
             <motion.h1
-              className="text-5xl md:text-7xl font-extrabold tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-gray-200 via-gray-300 to-gray-400"
+              className="text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-gray-200 via-gray-300 to-gray-400"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -77,7 +77,7 @@ const LandingPage = () => {
               Modern Payroll for Modern Businesses
             </motion.h1>
             <motion.p
-              className="mt-6 text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto"
+              className="mt-6 text-base sm:text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
@@ -90,7 +90,7 @@ const LandingPage = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <Button size="lg" onClick={() => router.push('/register')} className="text-lg py-7 px-8">
+              <Button size="lg" onClick={() => router.push('/register')} className="text-base sm:text-lg py-5 px-6 sm:py-7 sm:px-8">
                 Get Started for Free <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </motion.div>
@@ -107,8 +107,8 @@ const LandingPage = () => {
           viewport={{ once: true, amount: 0.2 }}
         >
           <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+            <div className="text-center mb-12 sm:mb-16">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
                 Why KazuPay?
               </h2>
               <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
@@ -129,9 +129,9 @@ const LandingPage = () => {
                 title: 'Guaranteed Compliance',
                 description: 'Stay compliant with ever-changing tax laws and regulations.',
               }].map(feature => (
-                <div key={feature.title} className="bg-background/40 p-8 rounded-lg text-center">
-                  <feature.icon className="h-12 w-12 text-primary mx-auto mb-6" />
-                  <h3 className="text-2xl font-bold mb-3">{feature.title}</h3>
+                <div key={feature.title} className="bg-background/40 p-6 sm:p-8 rounded-lg text-center">
+                  <feature.icon className="h-10 w-10 sm:h-12 sm:w-12 text-primary mx-auto mb-4 sm:mb-6" />
+                  <h3 className="text-xl sm:text-2xl font-bold mb-3">{feature.title}</h3>
                   <p className="text-muted-foreground">{feature.description}</p>
                 </div>
               ))}
@@ -149,8 +149,8 @@ const LandingPage = () => {
           viewport={{ once: true, amount: 0.2 }}
         >
           <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+            <div className="text-center mb-12 sm:mb-16">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
                 Choose Your Plan
               </h2>
               <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
@@ -167,12 +167,12 @@ const LandingPage = () => {
                     plan === p.name ? 'ring-2 ring-primary' : ''
                   )}
                 >
-                  <div className="p-8">
+                  <div className="p-6 sm:p-8">
                     {p.popular && <div className="text-sm font-bold text-primary mb-2">MOST POPULAR</div>}
-                    <h3 className="text-2xl font-bold mb-2">{p.name}</h3>
+                    <h3 className="text-xl sm:text-2xl font-bold mb-2">{p.name}</h3>
                     <p className="text-muted-foreground mb-6 h-12">{p.description}</p>
                     <div className="flex items-baseline gap-2 mb-6">
-                      <span className="text-5xl font-extrabold">{p.price}</span>
+                      <span className="text-4xl sm:text-5xl font-extrabold">{p.price}</span>
                       {p.pricePeriod && <span className="text-muted-foreground">{p.pricePeriod}</span>}
                     </div>
                     <Button 
@@ -184,7 +184,7 @@ const LandingPage = () => {
                        {plan === p.name ? 'Current Plan' : 'Choose Plan'}
                     </Button>
                   </div>
-                  <div className="border-t border-white/10 p-8 flex-grow">
+                  <div className="border-t border-white/10 p-6 sm:p-8 flex-grow">
                     <h4 className="font-semibold mb-4">Features include:</h4>
                     <ul className="space-y-3">
                       {p.features.map(feature => (
@@ -210,14 +210,14 @@ const LandingPage = () => {
           viewport={{ once: true, amount: 0.2 }}
         >
           <div className="container mx-auto px-4 text-center">
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
               Ready to Simplify Your Payroll?
             </h2>
             <p className="mt-6 text-muted-foreground max-w-2xl mx-auto">
               Join KazuPay today and experience a payroll system that works for you, not against you.
             </p>
             <div className="mt-10">
-              <Button size="lg" onClick={() => router.push('/register')} className="text-lg py-7 px-8">
+              <Button size="lg" onClick={() => router.push('/register')} className="text-base sm:text-lg py-5 px-6 sm:py-7 sm:px-8">
                 Sign Up Now
               </Button>
             </div>

@@ -93,18 +93,18 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-md space-y-6">
+    <div className="w-full max-w-sm md:max-w-md space-y-4 md:space-y-6">
       <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-primary">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary">
           Sign in to your Account
         </h1>
-        <p className="mt-2 text-muted-foreground">
+        <p className="mt-2 text-sm text-muted-foreground">
           Welcome back! Please enter your details.
         </p>
       </div>
 
-      <Button variant="outline" className="w-full text-lg py-6">
-        <FcGoogle className="mr-4 h-6 w-6" />
+      <Button variant="outline" className="w-full text-md md:text-lg py-5 md:py-6">
+        <FcGoogle className="mr-3 h-5 w-5 md:mr-4 md:h-6 md:w-6" />
         Sign in with Google
       </Button>
 
@@ -180,11 +180,11 @@ export default function LoginForm() {
 
           <Button
             type="submit"
-            className="w-full text-lg py-6 bg-primary text-primary-foreground hover:bg-primary/90"
+            className="w-full text-md md:text-lg py-5 md:py-6 bg-primary text-primary-foreground hover:bg-primary/90"
             disabled={isLoading}
           >
             {isLoading ? (
-              <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+              <Loader2 className="mr-2 h-5 w-5 md:h-6 md:w-6 animate-spin" />
             ) : (
               "Sign In"
             )}

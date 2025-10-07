@@ -1,5 +1,5 @@
 import LoginForm from '../../components/auth/login-form';
-import KazuPaySolutionsLogo from '@/components/icons/payease-logo';
+import KazuPayGraphicalLogo from '@/components/icons/kazupay-graphical-logo';
 import Link from 'next/link';
 import Aurora from '@/components/auth/Aurora';
 
@@ -7,36 +7,36 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
       {/* Left Panel */}
-      <div className="relative hidden lg:flex flex-col items-center justify-center bg-gray-900 text-white p-12">
+      <div className="relative hidden lg:flex flex-col items-center justify-center bg-gray-900 text-white p-8 md:p-12">
         <Aurora />
         <div className="relative z-10 text-center">
           <Link href="/">
-            <KazuPaySolutionsLogo className="h-16 w-auto mx-auto text-primary" />
+            <KazuPayGraphicalLogo className="h-16 w-auto mx-auto" />
           </Link>
-          <h1 className="mt-6 text-4xl font-extrabold tracking-tight">
-            Welcome to KazuPay Solutions
+          <h1 className="mt-6 text-3xl md:text-4xl font-extrabold tracking-tight">
+            Welcome to KazuPay
           </h1>
-          <p className="mt-4 text-lg text-gray-300 max-w-md mx-auto">
+          <p className="mt-4 text-md md:text-lg text-gray-300 max-w-md mx-auto">
             The smart, intuitive, and powerful payroll solution for modern
             businesses.
           </p>
         </div>
-        <div className="absolute bottom-8 text-sm text-gray-400">
-          &copy; {new Date().getFullYear()} KazuPay Solutions. All rights
+        <div className="absolute bottom-6 md:bottom-8 text-xs md:text-sm text-gray-400">
+          &copy; {new Date().getFullYear()} KazuPay. All rights
           reserved.
         </div>
       </div>
 
       {/* Right Panel */}
-      <div className="flex flex-col items-center justify-center bg-background p-4 sm:p-8">
-        <div className="w-full max-w-md">
-          <div className="lg:hidden mb-8 text-center">
+      <div className="flex flex-col items-center justify-center bg-background p-4 sm:p-6 md:p-8">
+        <div className="w-full max-w-sm md:max-w-md">
+          <div className="lg:hidden mb-6 md:mb-8 text-center">
             <Link href="/" className="inline-block">
-              <KazuPaySolutionsLogo className="h-12 w-auto text-primary mx-auto" />
+              <KazuPayGraphicalLogo className="h-12 w-auto mx-auto" />
             </Link>
           </div>
           <LoginForm />
-          <p className="mt-8 text-center text-sm text-muted-foreground">
+          <p className="mt-6 md:mt-8 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
             <Link
               href="/register"
