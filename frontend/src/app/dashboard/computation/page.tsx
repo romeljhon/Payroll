@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Calculator, Save, Upload, Download, Filter } from "lucide-react";
+import { Calculator, Save, Upload, Download, Filter, Lock } from "lucide-react";
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/hooks/use-subscription";
+import { useRouter } from "next/navigation";
 
 interface PayrollRow {
   id: string;
@@ -41,11 +43,14 @@ export default function PayrollComputationPage() {
   const [filterTerm, setFilterTerm] = useState("");
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { plan } = useSubscription();
+  const router = useRouter();
 
   useEffect(() => {
-    // Initialize with calculated net pay
-    setPayrollData(initialPayrollData.map(row => ({ ...row, netPay: calculateNetPay(row) })));
-  }, []);
+    if (plan === 'Enterprise') {
+      setPayrollData(initialPayrollData.map(row => ({ ...row, netPay: calculateNetPay(row) })));
+    }
+  }, [plan]);
 
   const handleInputChange = (id: string, field: keyof PayrollRow, value: string | number) => {
     setPayrollData(prevData =>
@@ -63,7 +68,6 @@ export default function PayrollComputationPage() {
   };
 
   const handleSaveChanges = () => {
-    // Placeholder for saving data
     console.log("Saving payroll data:", payrollData);
     toast({ title: "Changes Saved", description: "Payroll data has been successfully saved." });
   };
@@ -79,7 +83,6 @@ export default function PayrollComputationPage() {
         title: "Import Simulated",
         description: `File "${file.name}" selected. In a real app, this data would be processed.`,
       });
-      // Reset file input to allow selecting the same file again if needed
       if(event.target) {
         event.target.value = "";
       }
@@ -93,6 +96,21 @@ export default function PayrollComputationPage() {
       row.employeeName.toLowerCase().includes(lowercasedFilterTerm)
     );
   }, [payrollData, filterTerm]);
+
+  if (plan !== 'Enterprise') {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] text-center p-4">
+        <Lock className="w-16 h-16 text-muted-foreground mb-4" />
+        <h2 className="text-2xl font-semibold mb-2">Feature Locked</h2>
+        <p className="text-muted-foreground mb-6 max-w-sm">
+          The <b>Payroll Computation</b> feature is only available on the <b>Enterprise</b> plan. Please upgrade to access this exclusive feature.
+        </p>
+        <Button onClick={() => router.push('/pricing')}>
+          Upgrade to Enterprise
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -178,5 +196,3 @@ export default function PayrollComputationPage() {
     </div>
   );
 }
-
-    

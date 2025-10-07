@@ -4,9 +4,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ReactQueryProvider } from '@/lib/react-query-provider';
 import Aurora from '@/components/auth/Aurora';
+import { SubscriptionProvider } from '@/hooks/use-subscription';
+import { RolesAndPermissionsProvider } from '@/hooks/roles-and-permissions';
 
 export const metadata: Metadata = {
-  title: 'KazuPay Solutions  - Payroll Management System',
+  title: 'KazuPay Solutions - Payroll Management System',
   description: 'Efficient and easy payroll management by KazuPay Solutions .',
 };
 
@@ -29,12 +31,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ReactQueryProvider> {/* ✅ wrap here */}
-            {/* <Aurora /> */}
-            {children}
-            <Toaster />
+          <ReactQueryProvider>
+            <SubscriptionProvider>
+              <RolesAndPermissionsProvider>
+                {children}
+                <Toaster />
+              </RolesAndPermissionsProvider>
+            </SubscriptionProvider>
           </ReactQueryProvider>
-          <Toaster />
         </ThemeProvider>
       </body>
     </html>

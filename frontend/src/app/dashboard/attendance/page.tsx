@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,9 +18,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, PlusCircle } from "lucide-react";
+import { CalendarIcon, PlusCircle, Lock } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useSubscription } from "@/hooks/use-subscription";
 
 import {
   AddTimekeeping,
@@ -58,6 +60,8 @@ const mapApiToRecord = (it: any): AttendanceRecord => ({
 
 export default function AttendancePage() {
   const { toast } = useToast();
+  const { plan } = useSubscription();
+  const router = useRouter();
 
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
   const [businesses, setBusinesses] = useState<any[]>([]);
@@ -75,6 +79,7 @@ export default function AttendancePage() {
 
   // === Load businesses & branches on mount ===
   useEffect(() => {
+    if (plan === 'Basic') return;
     (async () => {
       try {
         const bizList = await getAllBranchesByBusiness();
@@ -87,7 +92,7 @@ export default function AttendancePage() {
         });
       }
     })();
-  }, [toast]);
+  }, [plan, toast]);
 
   // === Load employees when branch changes ===
   useEffect(() => {
@@ -171,6 +176,21 @@ export default function AttendancePage() {
       setSubmitting(false);
     }
   };
+
+  if (plan === 'Basic') {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] text-center p-4">
+        <Lock className="w-16 h-16 text-muted-foreground mb-4" />
+        <h2 className="text-2xl font-semibold mb-2">Feature Locked</h2>
+        <p className="text-muted-foreground mb-6 max-w-sm">
+          The <b>Attendance</b> feature is only available on the <b>Pro</b> and <b>Enterprise</b> plans. Please upgrade to access this feature.
+        </p>
+        <Button onClick={() => router.push('/pricing')}>
+          Upgrade Your Plan
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

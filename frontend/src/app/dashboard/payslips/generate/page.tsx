@@ -17,10 +17,12 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Send, FileSearch, Gift, Users } from "lucide-react";
+import { Send, FileSearch, Gift, Users, Lock } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { getAllEmployee, getPayrollCycle } from "@/lib/api";
+import { useSubscription } from "@/hooks/use-subscription";
+import { useRouter } from "next/navigation";
 
 interface Employee {
   id: string;
@@ -63,9 +65,12 @@ export default function GeneratePayslipsPage() {
   const [include13th, setInclude13th] = useState(false);
 
   const { toast } = useToast();
+  const { plan } = useSubscription();
+  const router = useRouter();
 
   // ✅ Fetch employees & payroll cycles
   useEffect(() => {
+    if (plan === 'Basic') return;
     async function fetchData() {
       try {
         const data = await getAllEmployee();
@@ -86,7 +91,7 @@ export default function GeneratePayslipsPage() {
       }
     }
     fetchData();
-  }, []);
+  }, [plan, toast]);
 
   // ✅ Generate payroll (POST /api/generate/)
   const handleGeneratePayroll = async () => {
@@ -256,6 +261,21 @@ export default function GeneratePayslipsPage() {
       });
     }
   };
+
+  if (plan === 'Basic') {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] text-center p-4">
+        <Lock className="w-16 h-16 text-muted-foreground mb-4" />
+        <h2 className="text-2xl font-semibold mb-2">Feature Locked</h2>
+        <p className="text-muted-foreground mb-6 max-w-sm">
+          The <b>Generate Payslip</b> feature is only available on the <b>Pro</b> and <b>Enterprise</b> plans. Please upgrade to access this feature.
+        </p>
+        <Button onClick={() => router.push('/pricing')}>
+          Upgrade Your Plan
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

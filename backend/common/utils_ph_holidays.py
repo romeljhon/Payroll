@@ -1,57 +1,71 @@
-from datetime import date, timedelta
-from common.constants import PH_REGULAR_HOLIDAYS, PH_SPECIAL_HOLIDAYS
-from timekeeping.models import Holiday
-from common.constants import PH_DEFAULT_MULTIPLIERS
+from datetime import datetime
+from .fetch_holidays import get_holidays
 
-def _compute_easter(year: int) -> date:
-    a = year % 19
-    b = year // 100
-    c = year % 100
-    d = b // 4
-    e = b % 4
-    f = (b + 8) // 25
-    g = (b - f + 1) // 3
-    h = (19*a + b - d - g + 15) % 30
-    i = c // 4
-    k = c % 4
-    l = (32 + 2*e + 2*i - h - k) % 7
-    m = (a + 11*h + 22*l) // 451
-    month = (h + l - 7*m + 114) // 31
-    day = ((h + l - 7*m + 114) % 31) + 1
-    return date(year, month, day)
+# Based on historical data and common classifications in the Philippines.
+# The Nager.Date API does not distinguish between Regular and Special holidays for PH.
+REGULAR_HOLIDAY_NAMES = [
+    "New Year's Day",
+    "Araw ng Kagitingan",
+    "Maundy Thursday",
+    "Good Friday",
+    "Labor Day",
+    "Independence Day",
+    "National Heroes Day",
+    "Bonifacio Day",
+    "Christmas Day",
+    "Rizal Day",
+]
 
-def _last_monday_of_august(year: int) -> date:
-    d = date(year, 8, 31)
-    while d.weekday() != 0:
-        d -= timedelta(days=1)
-    return d
+SPECIAL_HOLIDAY_NAMES = [
+    "Chinese New Year",
+    "EDSA People Power Revolution Anniversary",
+    "Ninoy Aquino Day",
+    "All Saints' Day",
+    "All Souls' Day",
+    "Feast of the Immaculate Conception of Mary",
+    "Christmas Eve",
+    "New Year's Eve",
+]
 
 def get_ph_recurring_holidays(year: int):
-    easter = _compute_easter(year)
-    maundy_thursday = easter - timedelta(days=3)
-    good_friday = easter - timedelta(days=2)
+    """
+    Fetches Philippine holidays for a given year from the Nager.Date API
+    and categorizes them into REGULAR and SPECIAL.
+    """
+    holidays_from_api = get_holidays(year)
+    
+    if not holidays_from_api:
+        return {"REGULAR": [], "SPECIAL": []}
 
-    regular = [
-        ("New Year's Day", date(year, 1, 1)),
-        ("Araw ng Kagitingan", date(year, 4, 9)),
-        ("Maundy Thursday", maundy_thursday),
-        ("Good Friday", good_friday),
-        ("Labor Day", date(year, 5, 1)),
-        ("Independence Day", date(year, 6, 12)),
-        ("National Heroes Day", _last_monday_of_august(year)),
-        ("Bonifacio Day", date(year, 11, 30)),
-        ("Christmas Day", date(year, 12, 25)),
-        ("Rizal Day", date(year, 12, 30)),
-    ]
+    regular_holidays = []
+    special_holidays = []
 
-    special = [
-        ("EDSA People Power Revolution Anniversary", date(year, 2, 25)),
-        ("Ninoy Aquino Day", date(year, 8, 21)),
-        ("All Saints' Day", date(year, 11, 1)),
-        ("All Souls' Day", date(year, 11, 2)),
-        ("Feast of the Immaculate Conception of Mary", date(year, 12, 8)),
-        ("Christmas Eve", date(year, 12, 24)),
-        ("New Year's Eve", date(year, 12, 31)),
-    ]
+    # Get the names of holidays that are consistently regular.
+    # Some holidays might change type, but this list is a stable baseline.
+    known_regular_names = set(REGULAR_HOLIDAY_NAMES)
+    known_special_names = set(SPECIAL_HOLIDAY_NAMES)
 
-    return {"REGULAR": regular, "SPECIAL": special}
+    for holiday in holidays_from_api:
+        holiday_name = holiday.get('localName')
+        holiday_date_str = holiday.get('date')
+        
+        if not holiday_name or not holiday_date_str:
+            continue
+            
+        try:
+            holiday_date = datetime.strptime(holiday_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            continue
+
+        # Classify based on name.
+        if holiday_name in known_regular_names:
+            regular_holidays.append((holiday_name, holiday_date))
+        elif holiday_name in known_special_names:
+            special_holidays.append((holiday_name, holiday_date))
+        else:
+            # Fallback for holidays not in our explicit lists (e.g., one-off proclamations).
+            # We will assume they are special non-working holidays, which is a common case.
+            if 'Public' in holiday.get('types', []):
+                special_holidays.append((holiday_name, holiday_date))
+
+    return {"REGULAR": regular_holidays, "SPECIAL": special_holidays}

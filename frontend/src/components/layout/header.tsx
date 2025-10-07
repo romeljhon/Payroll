@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ChevronDown, UserCircle, Sun, Moon, Menu } from 'lucide-react';
+import { ChevronDown, UserCircle, Sun, Moon, Menu, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -10,10 +10,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
+import { useRolesAndPermissions } from '@/hooks/roles-and-permissions';
 
 interface HeaderProps {
   onMenuToggle: () => void;
@@ -23,6 +26,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
   const [userName, setUserName] = useState('User');
   const router = useRouter();
   const { setTheme, theme } = useTheme();
+  const { role, setRole } = useRolesAndPermissions();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -72,6 +76,26 @@ export default function Header({ onMenuToggle }: HeaderProps) {
         >
           <Menu className="h-6 w-6" />
         </Button>
+
+        {/* Role Switcher */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-muted-foreground" />
+              <span className="capitalize text-sm font-medium">{role}</span>
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuLabel>Switch Role</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={role} onValueChange={(value) => setRole(value as any)}>
+              <DropdownMenuRadioItem value="owner">Owner</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="admin">Admin</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="employee">Employee</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
       </div>
       <div className="flex items-center space-x-2 sm:space-x-4">
         <Button
@@ -99,7 +123,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
             <DropdownMenuItem asChild>
               <Link href="/dashboard/settings">Profile</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>Billing</DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/dashboard/settings">Settings</Link>
             </DropdownMenuItem>

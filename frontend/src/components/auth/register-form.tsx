@@ -1,11 +1,10 @@
-"use client";
+'use client';
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -16,17 +15,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { FcGoogle } from "react-icons/fc";
 
-/* ------------------------- 1. Schema ------------------------- */
 const registerSchema = z
   .object({
     first_name: z.string().min(1, "First name is required"),
@@ -42,12 +34,9 @@ const registerSchema = z
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
-/* ------------------------- 2. API ------------------------- */
 async function registerRequest(values: RegisterFormValues) {
   const res = await fetch(
-    `${
-      process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://9fzvx8-8000.csb.app/"
-    }/accounts/register/`,
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/register/`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -68,13 +57,10 @@ async function registerRequest(values: RegisterFormValues) {
   return res.json();
 }
 
-/* ------------------------- 3. Component ------------------------- */
 export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-
-  // toggle states
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -110,15 +96,35 @@ export default function RegisterForm() {
   }
 
   return (
-    <Card className="w-full shadow-xl">
-      <CardHeader>
-        <CardTitle className="text-2xl text-primary">Create Account</CardTitle>
-      </CardHeader>
+    <div className="w-full max-w-md space-y-6">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold tracking-tight text-primary">
+          Create your Account
+        </h1>
+        <p className="mt-2 text-muted-foreground">
+          Join the future of payroll management.
+        </p>
+      </div>
+
+      <Button variant="outline" className="w-full text-lg py-6">
+        <FcGoogle className="mr-4 h-6 w-6" />
+        Sign up with Google
+      </Button>
+
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-background px-2 text-muted-foreground">
+            Or continue with
+          </span>
+        </div>
+      </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-0">
-          <CardContent className="space-y-6">
-            {/* First Name */}
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="first_name"
@@ -132,8 +138,6 @@ export default function RegisterForm() {
                 </FormItem>
               )}
             />
-
-            {/* Last Name */}
             <FormField
               control={form.control}
               name="last_name"
@@ -147,106 +151,101 @@ export default function RegisterForm() {
                 </FormItem>
               )}
             />
+          </div>
 
-            {/* Email */}
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input
+                    type="email"
+                    placeholder="you@example.com"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Password</FormLabel>
+                <FormControl>
+                  <div className="relative">
                     <Input
-                      type="email"
-                      placeholder="you@example.com"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
                       {...field}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-3 flex items-center text-muted-foreground"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            {/* Password */}
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        {...field}
-                      />
-                      <button
-                        type="button"
-                        className="absolute inset-y-0 right-3 flex items-center text-gray-500"
-                        onClick={() => setShowPassword((prev) => !prev)}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <FormField
+            control={form.control}
+            name="confirmPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Confirm Password</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      type={showConfirm ? "text" : "password"}
+                      placeholder="••••••••"
+                      {...field}
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-3 flex items-center text-muted-foreground"
+                      onClick={() => setShowConfirm((prev) => !prev)}
+                    >
+                      {showConfirm ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            {/* Confirm Password */}
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input
-                        type={showConfirm ? "text" : "password"}
-                        placeholder="••••••••"
-                        {...field}
-                      />
-                      <button
-                        type="button"
-                        className="absolute inset-y-0 right-3 flex items-center text-gray-500"
-                        onClick={() => setShowConfirm((prev) => !prev)}
-                      >
-                        {showConfirm ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-
-          <CardFooter>
-            <Button
-              type="submit"
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                "Sign Up"
-              )}
-            </Button>
-          </CardFooter>
+          <Button
+            type="submit"
+            className="w-full text-lg py-6 bg-primary text-primary-foreground hover:bg-primary/90"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+            ) : (
+              "Sign Up"
+            )}
+          </Button>
         </form>
       </Form>
-    </Card>
+    </div>
   );
 }

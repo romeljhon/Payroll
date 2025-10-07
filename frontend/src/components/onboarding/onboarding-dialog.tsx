@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -8,26 +8,19 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard,
-  Building2,
-  MapPin,
-  Briefcase,
   Users,
   CalendarCheck,
-  Calendar,
-  Clock,
-  Settings,
   Calculator,
   FileText,
-  Send,
   CheckCircle,
   ArrowLeft,
   ArrowRight,
-} from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+} from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 interface OnboardingDialogProps {
   isOpen: boolean;
@@ -37,71 +30,43 @@ interface OnboardingDialogProps {
 const onboardingSteps = [
   {
     icon: LayoutDashboard,
-    title: "Welcome to KazuPay Solutions!",
+    title: 'Welcome to KazuPay Solutions!',
     description:
-      "Let's take a quick tour to help you set up your payroll system step by step.",
-  },
-  {
-    icon: Building2,
-    title: "Set Up Your Business",
-    description:
-      "Start by creating your business profile with company details and preferences.",
-    image: "https://placehold.co/400x200.png?text=Business+Setup",
-  },
-  {
-    icon: MapPin,
-    title: "Add Branches",
-    description:
-      "Easily manage multiple business locations by adding different branches.",
-    image: "https://placehold.co/400x200.png?text=Branch+Setup",
-  },
-  {
-    icon: Briefcase,
-    title: "Define Positions",
-    description:
-      "Create job positions to organize employee roles within your business.",
-    image: "https://placehold.co/400x200.png?text=Position+Setup",
+      'This guide will walk you through the essential steps to get your payroll system up and running.',
   },
   {
     icon: Users,
-    title: "Manage Employees",
+    title: 'Step 1: Configure Role-Based Access',
     description:
-      "Add employee details, assign them to branches and positions, and manage profiles.",
-    image: "https://placehold.co/400x200.png?text=Employee+List",
+      'Define roles for your team members (e.g., Admin, HR, Employee) to control access to sensitive information and features. This is crucial for security and efficient management.',
+    image: 'https://placehold.co/400x200.png?text=Role-Based+Access',
   },
   {
     icon: CalendarCheck,
-    title: "Track Attendance",
+    title: 'Step 2: Set Up Attendance Tracking',
     description:
-      "Record employee attendance, leaves, and overtime to ensure accurate payroll.",
-    image: "https://placehold.co/400x200.png?text=Attendance+Tracking",
+      'Configure your attendance policies, including work hours, overtime rules, and leave policies. Accurate attendance data is the foundation of a reliable payroll.',
+    image: 'https://placehold.co/400x200.png?text=Attendance+Setup',
   },
   {
-    icon: Settings,
-    title: "Payroll Configuration",
+    icon: Calculator,
+    title: 'Step 3: Define Payroll Computation',
     description:
-      "Set up payroll essentials including cycles, policies, components, structures, and holidays.",
-    image: "https://placehold.co/400x200.png?text=Payroll+Configuration",
+      'Set up payroll components such as earnings (basic, allowances), deductions (taxes, loans), and contributions (provident fund). This ensures payroll is calculated correctly.',
+    image: 'https://placehold.co/400x200.png?text=Payroll+Computation',
   },
   {
     icon: FileText,
-    title: "Payroll Records",
+    title: 'Step 4: Generate and Distribute Payslips',
     description:
-      "Maintain detailed payroll records for compliance and financial tracking.",
-    image: "https://placehold.co/400x200.png?text=Payroll+Records",
-  },
-  {
-    icon: Send,
-    title: "Generate & Send Payslips",
-    description:
-      "Easily generate payslips and send them digitally to employees.",
-    image: "https://placehold.co/400x200.png?text=Payslip+Preview",
+      'After processing payroll, you can generate detailed payslips for your employees. KazuPay makes it easy to review, approve, and distribute them securely.',
+    image: 'https://placehold.co/400x200.png?text=Payslip+Generation',
   },
   {
     icon: CheckCircle,
-    title: "You're All Set!",
+    title: 'Setup Complete!',
     description:
-      "Your payroll system is ready. Explore KazuPay Solutions and simplify your payroll journey!",
+      'You have successfully configured the core features of your payroll system. You can now manage your employees, run payroll, and generate reports with confidence.',
   },
 ];
 
