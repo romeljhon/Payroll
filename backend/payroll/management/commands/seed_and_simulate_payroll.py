@@ -114,7 +114,7 @@ class Command(BaseCommand):
     def _seed_employees_and_positions(self, br: Branch) -> tuple[list[Employee], dict[str, Position]]:
         # Create Positions
         positions = {}
-        pos_names = ["Software Engineer", "Solution Architect", "Project Manager", "QA Engineer", "UI/UX Designer"]
+        pos_names = ["Software Engineer", "Solution Architect", "Project Manager", "QA Engineer", "UI UX Designer"]
         for name in pos_names:
             pos, _ = Position.objects.get_or_create(name=name)
             positions[name.replace(" ", "_").lower()] = pos
@@ -159,16 +159,16 @@ class Command(BaseCommand):
 
         for pos in positions.values():
             # Basic pay for all
-            SalaryStructure.objects.get_or_create(position=pos, component=basic, defaults={'rate': Decimal("1.0")}) # 100% of basic salary rate
+            SalaryStructure.objects.get_or_create(position=pos, component=basic, defaults={'amount': 100, 'is_percentage': True}) # 100% of basic salary rate
 
             # Allowance for some
             if pos.name in ["Solution Architect", "Project Manager"]:
                  SalaryStructure.objects.get_or_create(position=pos, component=allow, defaults={'amount': Decimal("5000.00")})
 
             # Standard deductions for all
-            SalaryStructure.objects.get_or_create(position=pos, component=sss, defaults={'is_fixed_amount': False}) # Indicates table-based computation
-            SalaryStructure.objects.get_or_create(position=pos, component=philhealth, defaults={'is_fixed_amount': False})
-            SalaryStructure.objects.get_or_create(position=pos, component=pagibig, defaults={'amount': Decimal("100.00"), 'is_fixed_amount': True})
+            SalaryStructure.objects.get_or_create(position=pos, component=sss, defaults={'amount': 0, 'is_percentage': False}) # Indicates table-based computation
+            SalaryStructure.objects.get_or_create(position=pos, component=philhealth, defaults={'amount': 0, 'is_percentage': False})
+            SalaryStructure.objects.get_or_create(position=pos, component=pagibig, defaults={'amount': Decimal("100.00")})
 
 
     def _seed_realistic_timelogs(self, emp: Employee, anchor_month: date):
