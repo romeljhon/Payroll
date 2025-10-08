@@ -126,3 +126,19 @@ body {
     @apply bg-card/50 backdrop-blur-lg border border-border/20 rounded-lg shadow-lg;
   }
 }
+
+@layer utilities {
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+
+  .fixed.inset-0.z-50 {
+    z-index: 9999;
+  }
+}

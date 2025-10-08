@@ -6,6 +6,7 @@ import { ReactQueryProvider } from '@/lib/react-query-provider';
 // import Aurora from '@/components/auth/Aurora';
 import { SubscriptionProvider } from '@/hooks/use-subscription';
 import { RolesAndPermissionsProvider } from '@/hooks/roles-and-permissions';
+import Loading from '@/components/ui/loading';
 
 export const metadata: Metadata = {
   title: 'KazuPay Solutions - Payroll Management System',
@@ -34,6 +35,7 @@ export default function RootLayout({
           <ReactQueryProvider>
             <SubscriptionProvider>
               <RolesAndPermissionsProvider>
+                <Loading />
                 {children}
                 <Toaster />
               </RolesAndPermissionsProvider>
