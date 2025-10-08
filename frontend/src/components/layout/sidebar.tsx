@@ -1,4 +1,4 @@
-'use client';
+'client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -49,7 +49,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard/employees', label: 'Employees', icon: Users, roles: ['owner', 'admin'] },
   { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck, roles: ['owner', 'admin'] },
   { href: '/dashboard/computation', label: 'Payroll', icon: Calculator, roles: ['owner', 'admin'] },
-  { href: '/dashboard/payslips/generate', label: 'Generate Payslips', icon: Send, roles: ['owner', 'admin'] },
+  { href: '/dashboard/payslips/generate', label: 'Payslips', icon: Send, roles: ['owner', 'admin'] },
   { href: '/dashboard/tutorial', label: 'View Tutorial', icon: Send, roles: ['owner', 'admin', 'employee'] },
   { href: '/dashboard/my-payslips', label: 'My Payslips', icon: FileText, roles: ['employee'] },
 ];
@@ -57,6 +57,11 @@ const navItems: NavItem[] = [
 const payrollSubItems: NavItem[] = [
   { href: '/dashboard/payroll/config', label: 'Payroll Configuration', icon: GitMerge, roles: ['owner', 'admin'] },
   { href: '/dashboard/payroll/records', label: 'Payroll Records', icon: Calculator, roles: ['owner', 'admin'] },
+];
+
+const payslipsSubItems: NavItem[] = [
+    { href: '/dashboard/payslips/generate', label: 'Generate & Preview', icon: Calculator, roles: ['owner', 'admin'] },
+    { href: '/dashboard/payslips/distribution', label: 'Distribution', icon: Send, roles: ['owner', 'admin'] },
 ];
 
 const organizationSubItems: NavItem[] = [
@@ -126,7 +131,8 @@ export default function Sidebar() {
             {filteredNavItems.map((item) => {
               const isActive =
                 pathname === item.href ||
-                (item.label === 'Payroll' && (pathname.startsWith('/dashboard/payroll') || pathname.startsWith('/dashboard/payslips'))) ||
+                (item.label === 'Payroll' && pathname.startsWith('/dashboard/payroll')) ||
+                (item.label === 'Payslips' && pathname.startsWith('/dashboard/payslips')) ||
                 (item.label === 'Organization' && pathname.startsWith('/dashboard/organization')) ||
                 (item.label === 'Employees' && pathname.startsWith('/dashboard/employees'));
 
@@ -157,8 +163,12 @@ export default function Sidebar() {
                 );
               }
 
-              if (['Payroll', 'Organization', 'Employees'].includes(item.label)) {
-                const subItems = item.label === 'Payroll' ? payrollSubItems : item.label === 'Organization' ? organizationSubItems : employeesSubItems;
+              if (['Payroll', 'Payslips', 'Organization', 'Employees'].includes(item.label)) {
+                const subItems = 
+                    item.label === 'Payroll' ? payrollSubItems : 
+                    item.label === 'Payslips' ? payslipsSubItems :
+                    item.label === 'Organization' ? organizationSubItems : 
+                    employeesSubItems;
                 return (
                   <Accordion type="single" collapsible key={item.label} className="w-full">
                     <AccordionItem value={item.label.toLowerCase()} className="border-none">
@@ -201,3 +211,4 @@ export default function Sidebar() {
     </TooltipProvider>
   );
 }
+''
