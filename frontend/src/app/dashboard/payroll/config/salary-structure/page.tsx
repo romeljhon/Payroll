@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { GitMerge, Edit, Trash2, Check, X, Plus, Minus, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -231,8 +231,8 @@ export default function SalaryStructurePage() {
                   const isEditing = editingId === s.id;
                   const draft = editDraft ?? { positionId: "", componentId: "", amount: "", isPercentage: false };
                   return (
-                    <>
-                      <TableRow key={s.id}>
+                    <React.Fragment key={s.id}>
+                      <TableRow>
                         <TableCell>
                            <Button size="icon" variant="ghost" onClick={() => toggleRowExpansion(s.id)} className="sm:hidden">
                               <ChevronDown className={`h-4 w-4 transition-transform ${expandedRows.has(s.id) ? 'rotate-180' : ''}`} />
@@ -264,7 +264,7 @@ export default function SalaryStructurePage() {
                             </TableCell>
                          </TableRow>
                       )}
-                    </>
+                    </React.Fragment>
                   );
                 })}
                 {salaryStructures.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-10">No salary structures.</TableCell></TableRow>}

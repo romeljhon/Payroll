@@ -74,7 +74,7 @@ export default function DistributePayslipsPage() {
 
         setEmployees(employeeData.map((emp: any) => ({ id: String(emp.id), name: `${emp.first_name} ${emp.last_name}` })));
         setCycles(cycleData);
-        setBusinesses(businessData);
+        setBusinesses(businessData.filter(Boolean));
         setBranches(branchData);
 
       } catch (err: any) {
