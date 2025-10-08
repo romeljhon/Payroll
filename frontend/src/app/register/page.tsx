@@ -8,7 +8,7 @@ export default function RegisterPage() {
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
       {/* Left Panel */}
       <div className="relative hidden lg:flex flex-col items-center justify-center bg-gray-900 text-white p-8 md:p-12">
-        <Aurora />
+        {/* <Aurora /> */}
         <div className="relative z-10 text-center">
           <Link href="/">
             <KazuPayGraphicalLogo className="h-16 w-auto mx-auto" />

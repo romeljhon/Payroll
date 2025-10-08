@@ -9,10 +9,10 @@ import PayrollCyclePage from "./cycle/page";
 
 export default function Page() {
   return (
-    <div className="w-full bg-card rounded-2xl shadow-lg border p-6">
+    <div className="w-full bg-card rounded-2xl shadow-lg border p-4 md:p-6">
       <Tabs defaultValue="cycle" className="w-full">
         {/* Tab Buttons */}
-        <TabsList className="grid w-full grid-cols-5 rounded-xl border bg-muted p-1">
+        <TabsList className="grid w-full grid-cols-1 md:grid-cols-5 rounded-xl border bg-muted p-1 h-auto md:h-10">
           <TabsTrigger
             value="cycle"
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg"

@@ -133,7 +133,7 @@ export default function SalaryComponentPage() {
     const updated = {
       name: formData.get("name") as string,
       code: formData.get("code") as string,
-      component_type: formData.get("type") === "Earning" ? "EARNING" : "DEDUCTION",
+      component_type: formData.get("type") === "Earning" ? "Earning" : "DEDUCTION",
       is_taxable: formData.get("isTaxable") === "on",
     };
 
@@ -175,33 +175,35 @@ export default function SalaryComponentPage() {
           <CardDescription>Define a new component for earnings or deductions.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleAddComponent} className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input id="name" name="name" placeholder="e.g., Overtime Pay" required />
+          <form onSubmit={handleAddComponent} className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input id="name" name="name" placeholder="e.g., Overtime Pay" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="code">Code</Label>
+                <Input id="code" name="code" placeholder="e.g., OT_PAY" required />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="type">Component Type</Label>
+                <Select name="type" required>
+                  <SelectTrigger id="type">
+                    <SelectValue placeholder="Select component type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Earning">Earning</SelectItem>
+                    <SelectItem value="Deduction">Deduction</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center space-x-2 self-end pb-1">
+                <Checkbox id="isTaxable" name="isTaxable" />
+                <Label htmlFor="isTaxable">Is taxable</Label>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="code">Code</Label>
-              <Input id="code" name="code" placeholder="e.g., OT_PAY" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="type">Component Type</Label>
-              <Select name="type" required>
-                <SelectTrigger id="type">
-                  <SelectValue placeholder="Select component type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Earning">Earning</SelectItem>
-                  <SelectItem value="Deduction">Deduction</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center space-x-2 md:pt-8">
-              <Checkbox id="isTaxable" name="isTaxable" />
-              <Label htmlFor="isTaxable">Is taxable</Label>
-            </div>
-            <div className="md:col-span-2 flex flex-wrap gap-2 pt-4 border-t">
-              <Button type="submit" className="bg-primary hover:bg-primary/90">
+            <div className="pt-4 border-t">
+              <Button type="submit" className="w-full sm:w-auto bg-primary hover:bg-primary/90">
                 Save Component
               </Button>
             </div>
@@ -216,62 +218,66 @@ export default function SalaryComponentPage() {
           <CardDescription>List of all configured salary components.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Is Taxable</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {components.map((component) => (
-                <TableRow key={component.id}>
-                  <TableCell className="font-medium">{component.name}</TableCell>
-                  <TableCell>{component.code}</TableCell>
-                  <TableCell>
-                    <span
-                      className={`px-2 py-1 text-xs rounded-full ${
-                        component.type === "Earning"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {component.type}
-                    </span>
-                  </TableCell>
-                  <TableCell>{component.isTaxable ? "Yes" : "No"}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="hover:text-accent mr-2"
-                      onClick={() => setEditComponent(component)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="hover:text-destructive"
-                      onClick={() => handleDelete(component.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {components.length === 0 && (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    No salary components found.
-                  </TableCell>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Is Taxable</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {components.map((component) => (
+                  <TableRow key={component.id}>
+                    <TableCell className="font-medium">{component.name}</TableCell>
+                    <TableCell>{component.code}</TableCell>
+                    <TableCell>
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${
+                          component.type === "Earning"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {component.type}
+                      </span>
+                    </TableCell>
+                    <TableCell>{component.isTaxable ? "Yes" : "No"}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end items-center whitespace-nowrap">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:text-accent"
+                          onClick={() => setEditComponent(component)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:text-destructive"
+                          onClick={() => handleDelete(component.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {components.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-4">
+                      No salary components found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 

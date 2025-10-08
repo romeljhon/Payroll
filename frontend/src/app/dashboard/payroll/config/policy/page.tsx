@@ -105,43 +105,6 @@ interface Business {
   name: string;
 }
 
-/* ---------------- stub data ---------------- */
-const STUB_POLICIES = [
-  {
-    id: 1,
-    business: 1,
-    business_name: "ABC Corporation",
-    grace_minutes: 10,
-    standard_working_days: 22,
-    late_penalty_per_minute: "5.00",
-    undertime_penalty_per_minute: "3.00",
-    absent_penalty_per_day: "500.00",
-    ot_multiplier: "1.50",
-    rest_day_multiplier: "2.00",
-    holiday_regular_multiplier: "2.00",
-    holiday_special_multiplier: "1.30",
-  },
-  {
-    id: 2,
-    business: 2,
-    business_name: "XYZ Enterprises",
-    grace_minutes: 15,
-    standard_working_days: 20,
-    late_penalty_per_minute: "4.00",
-    undertime_penalty_per_minute: "2.50",
-    absent_penalty_per_day: "400.00",
-    ot_multiplier: "1.25",
-    rest_day_multiplier: "1.75",
-    holiday_regular_multiplier: "2.20",
-    holiday_special_multiplier: "1.50",
-  },
-];
-
-const STUB_BUSINESSES: Business[] = [
-  { id: 1, name: "ABC Corporation" },
-  { id: 2, name: "XYZ Enterprises" },
-];
-
 /* ---------------- page ---------------- */
 export default function AddPayrollPolicyPage() {
   const form = useForm<PayrollPolicyFormValues>({
@@ -167,18 +130,19 @@ export default function AddPayrollPolicyPage() {
   const [loadingPolicies, setLoadingPolicies] = useState(true);
 
   const [editId, setEditId] = useState<number | null>(null);
+  const [expandedPolicy, setExpandedPolicy] = useState<number | null>(null);
 
   const reloadPolicies = useCallback(async () => {
+    setLoadingPolicies(true);
     try {
       const data = await getPolicys();
-      setPolicyList(Array.isArray(data) && data.length > 0 ? data : STUB_POLICIES);
+      setPolicyList(data || []);
     } catch (error: any) {
       toast({
         title: "Error fetching policies",
-        description: "Using stub data instead.",
+        description: "Could not retrieve policy data.",
         variant: "destructive",
       });
-      setPolicyList(STUB_POLICIES);
     } finally {
       setLoadingPolicies(false);
     }
@@ -188,10 +152,8 @@ export default function AddPayrollPolicyPage() {
   async function onSubmit(values: PayrollPolicyFormValues) {
     setSubmitting(true);
     try {
-      const selectedBizId = Number(values.business);
-
       const payload = {
-        business: selectedBizId,
+        business: Number(values.business),
         grace_minutes: values.graceMinutes,
         standard_working_days: values.standardWorkingDays,
         late_penalty_per_minute: toMoney(values.latePenaltyPerMinute),
@@ -204,26 +166,11 @@ export default function AddPayrollPolicyPage() {
       };
 
       if (editId) {
-        try {
-          await UpdatePolicy(String(editId), payload);
-        } catch {
-          // fallback to local state
-          setPolicyList((prev) =>
-            prev.map((p) => (p.id === editId ? { ...p, ...payload } : p))
-          );
-        }
+        await UpdatePolicy(String(editId), payload);
         toast({ title: "Policy Updated", description: "Policy successfully updated." });
         setEditId(null);
       } else {
-        try {
-          await AddPolicy(payload);
-        } catch {
-          // fallback local add
-          setPolicyList((prev) => [
-            ...prev,
-            { id: Date.now(), business_name: businessList.find((b) => b.id === selectedBizId)?.name || "Unknown", ...payload },
-          ]);
-        }
+        await AddPolicy(payload);
         toast({ title: "Policy Added", description: "Policy successfully created." });
       }
 
@@ -245,12 +192,15 @@ export default function AddPayrollPolicyPage() {
     if (!confirm("Are you sure you want to delete this policy?")) return;
     try {
       await DeletePolicy(id);
-    } catch {
-      // fallback local delete
-      setPolicyList((prev) => prev.filter((p) => p.id !== id));
+      toast({ title: "Policy Deleted", description: "Policy successfully deleted." });
+      await reloadPolicies();
+    } catch (e: any) {
+      toast({
+        title: "Error",
+        description: e?.message || "Could not delete the policy.",
+        variant: "destructive",
+      });
     }
-    toast({ title: "Policy Deleted", description: "Policy successfully deleted." });
-    await reloadPolicies();
   }
 
   // edit handler
@@ -275,14 +225,13 @@ export default function AddPayrollPolicyPage() {
     (async () => {
       try {
         const data: Business[] = await getBusiness();
-        setBusinessList(Array.isArray(data) && data.length > 0 ? data : STUB_BUSINESSES);
+        setBusinessList(data || []);
       } catch (error: any) {
         toast({
           title: "Error fetching businesses",
-          description: "Using stub data instead.",
+          description: "Could not retrieve business data.",
           variant: "destructive",
         });
-        setBusinessList(STUB_BUSINESSES);
       } finally {
         setLoadingBusinesses(false);
       }
@@ -319,14 +268,14 @@ export default function AddPayrollPolicyPage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {/* Business */}
                 <FormField
                   control={form.control}
                   name="business"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="sm:col-span-2">
                       <FormLabel>Business</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
@@ -375,7 +324,7 @@ export default function AddPayrollPolicyPage() {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 {submitting ? "Saving..." : editId ? "Update Policy" : "Add Policy"}
               </Button>
@@ -385,22 +334,30 @@ export default function AddPayrollPolicyPage() {
       </Card>
 
       {/* policies list */}
-      {loadingPolicies ? (
-        <p className="mt-8 text-muted-foreground">Loading policies...</p>
-      ) : (
-        <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-2">
-          {policyList.length > 0 ? (
-            policyList.map((policy) => (
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold text-primary">Existing Policies</h2>
+        {loadingPolicies ? (
+          <p className="text-muted-foreground">Loading policies...</p>
+        ) : policyList.length > 0 ? (
+          <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-2">
+            {policyList.map((policy) => (
               <Card
                 key={policy.id}
                 className="shadow-md bg-background text-foreground border border-border"
               >
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <div>
+                <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex-grow">
                     <CardTitle className="text-primary">{policy.business_name}</CardTitle>
                     <CardDescription>Payroll Policy Details</CardDescription>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setExpandedPolicy(expandedPolicy === policy.id ? null : policy.id)}
+                    >
+                      {expandedPolicy === policy.id ? "Hide Details" : "View Details"}
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -417,28 +374,30 @@ export default function AddPayrollPolicyPage() {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                    <div><span className="font-medium">Grace Minutes:</span> {policy.grace_minutes}</div>
-                    <div><span className="font-medium">Working Days:</span> {policy.standard_working_days}</div>
-                    <div><span className="font-medium">Late Penalty/min:</span> {policy.late_penalty_per_minute}</div>
-                    <div><span className="font-medium">Undertime Penalty/min:</span> {policy.undertime_penalty_per_minute}</div>
-                    <div><span className="font-medium">Absent Penalty/day:</span> {policy.absent_penalty_per_day}</div>
-                    <div><span className="font-medium">OT Multiplier:</span> {policy.ot_multiplier}</div>
-                    <div><span className="font-medium">Rest Day Multiplier:</span> {policy.rest_day_multiplier}</div>
-                    <div><span className="font-medium">Holiday Regular Multiplier:</span> {policy.holiday_regular_multiplier}</div>
-                    <div><span className="font-medium">Holiday Special Multiplier:</span> {policy.holiday_special_multiplier}</div>
-                  </div>
-                </CardContent>
+                {expandedPolicy === policy.id && (
+                  <CardContent>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm mt-4">
+                      <div><span className="font-medium">Grace Minutes:</span> {policy.grace_minutes}</div>
+                      <div><span className="font-medium">Working Days:</span> {policy.standard_working_days}</div>
+                      <div><span className="font-medium">Late Penalty/min:</span> {policy.late_penalty_per_minute}</div>
+                      <div><span className="font-medium">Undertime Penalty/min:</span> {policy.undertime_penalty_per_minute}</div>
+                      <div><span className="font-medium">Absent Penalty/day:</span> {policy.absent_penalty_per_day}</div>
+                      <div><span className="font-medium">OT Multiplier:</span> {policy.ot_multiplier}</div>
+                      <div><span className="font-medium">Rest Day Multiplier:</span> {policy.rest_day_multiplier}</div>
+                      <div><span className="font-medium">Holiday Regular Multiplier:</span> {policy.holiday_regular_multiplier}</div>
+                      <div><span className="font-medium">Holiday Special Multiplier:</span> {policy.holiday_special_multiplier}</div>
+                    </div>
+                  </CardContent>
+                )}
               </Card>
-            ))
-          ) : (
-            <Card className="p-6 text-center text-muted-foreground">
-              No policies found
-            </Card>
-          )}
-        </div>
-      )}
+            ))}
+          </div>
+        ) : (
+          <Card className="p-6 text-center text-muted-foreground">
+            No policies found
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

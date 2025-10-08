@@ -115,7 +115,7 @@ export default function Sidebar() {
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="p-2 rounded-lg hover:bg-sidebar-hover transition-all duration-200"
+            className="p-2 rounded-lg hover:bg-sidebar-hover transition-all duration-200 hidden sm:flex"
           >
             {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
           </button>

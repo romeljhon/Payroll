@@ -154,14 +154,14 @@ export default function PayrollCyclePage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {/* Business Select */}
                 <FormField
                   control={form.control}
                   name="business"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="sm:col-span-2">
                       <FormLabel>Business</FormLabel>
                       <Select
                         onValueChange={field.onChange}
@@ -183,9 +183,6 @@ export default function PayrollCyclePage() {
                           ))}
                         </SelectContent>
                       </Select>
-                      <FormDescription>
-                        Select the business for this payroll cycle.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -196,7 +193,7 @@ export default function PayrollCyclePage() {
                   control={form.control}
                   name="name"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="sm:col-span-2">
                       <FormLabel>Cycle Name</FormLabel>
                       <FormControl>
                         <Input
@@ -204,9 +201,6 @@ export default function PayrollCyclePage() {
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Enter a descriptive name for the cycle.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -217,7 +211,7 @@ export default function PayrollCyclePage() {
                   control={form.control}
                   name="cycleType"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="sm:col-span-2">
                       <FormLabel>Cycle Type</FormLabel>
                       <Select
                         onValueChange={field.onChange}
@@ -234,15 +228,10 @@ export default function PayrollCyclePage() {
                           <SelectItem value="MONTHLY">Monthly</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormDescription>
-                        Select how often the payroll runs.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
-                <div />
 
                 {/* Start Day */}
                 <FormField
@@ -259,9 +248,6 @@ export default function PayrollCyclePage() {
                           value={field.value ?? ""}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Enter the start day of the payroll cycle.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -282,15 +268,12 @@ export default function PayrollCyclePage() {
                           value={field.value ?? ""}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Enter the end day of the payroll cycle.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
-              <Button type="submit" className="bg-primary hover:bg-primary/90">
+              <Button type="submit" className="w-full sm:w-auto bg-primary hover:bg-primary/90">
                 Add Cycle
               </Button>
             </form>
@@ -307,6 +290,7 @@ export default function PayrollCyclePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -334,13 +318,14 @@ export default function PayrollCyclePage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-4">
                     No payroll cycles found.
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

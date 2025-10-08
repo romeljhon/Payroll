@@ -61,7 +61,7 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Aurora />
+      {/* <Aurora /> */}
       <LandingHeader />
 
       <main className="pt-20">

@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ReactQueryProvider } from '@/lib/react-query-provider';
-import Aurora from '@/components/auth/Aurora';
+// import Aurora from '@/components/auth/Aurora';
 import { SubscriptionProvider } from '@/hooks/use-subscription';
 import { RolesAndPermissionsProvider } from '@/hooks/roles-and-permissions';
 
