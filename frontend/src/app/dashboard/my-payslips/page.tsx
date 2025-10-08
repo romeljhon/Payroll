@@ -53,6 +53,10 @@ export default function MyPayslipsPage() {
     }
   }, [role, router]);
 
+  const handleViewPayslip = (payslipId: string) => {
+    router.push(`/dashboard/my-payslips/${payslipId}`);
+  };
+
   // Render a loading state or null while redirecting
   if (role !== 'employee') {
     return null;
@@ -89,7 +93,7 @@ export default function MyPayslipsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Button variant="ghost" size="icon" aria-label="View payslip">
+                      <Button variant="ghost" size="icon" aria-label="View payslip" onClick={() => handleViewPayslip(payslip.id)}>
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" aria-label="Download payslip">

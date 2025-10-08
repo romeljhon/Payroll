@@ -1,3 +1,4 @@
+
 # payroll/services/payslip_snapshot.py
 from __future__ import annotations
 
@@ -27,7 +28,7 @@ def _normalize_month(value) -> date:
 def get_employee_payslip_snapshot(
     employee_id: int,
     month: date | str,
-    cycle_type: Optional[str] = None,   # ✅ moved before run_id for compatibility
+    cycle_type: Optional[str] = None,
     run_id: Optional[int] = None,
     include_13th: bool = False,
 ) -> Dict:
@@ -55,12 +56,12 @@ def get_employee_payslip_snapshot(
     if not business:
         raise ValueError("Employee must belong to a branch with a business.")
 
-    # Base queryset (month + employee)
+    # Base queryset (month + employee) - NOW SORTS EARNINGS FIRST
     qs = (
         PayrollRecord.objects
         .select_related("component", "employee", "payroll_cycle", "run")
         .filter(employee_id=employee_id, month=month)
-        .order_by("component__component_type", "component__name", "id")
+        .order_by("-component__component_type", "component__name", "id") # Sorts 'EARNING' before 'DEDUCTION'
     )
     if not include_13th:
         qs = qs.filter(is_13th_month=False)
@@ -129,7 +130,7 @@ def get_employee_payslip_snapshot(
         "employee_name": emp_name,
         "employee_email": emp_email,
         "month": month,
-        "payroll_cycle": used_cycle_type,  # keep key name consistent for email/pdf
+        "payroll_cycle": used_cycle_type,
         "run_id": used_run_id,
         "rows": rows,
         "totals": {

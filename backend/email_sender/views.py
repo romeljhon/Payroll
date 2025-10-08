@@ -1,3 +1,4 @@
+
 # email_sender/views.py
 import os
 import re
@@ -10,6 +11,7 @@ from .brevo_client import api_instance
 
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
+from django.db import transaction
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -19,6 +21,7 @@ from drf_spectacular.utils import extend_schema
 from employees.models import Employee
 from payroll.services.payslip_snapshot import get_employee_payslip_snapshot
 from payroll.services.payslip_pdf import generate_payslip_pdf
+from .models import EmailSentLog # Import the new model
 
 # --- Config (env-driven) -----------------------------------------------------
 
@@ -32,41 +35,51 @@ EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 def send_email(subject, html_content, recipient_email, recipient_name=None, text_content=None, attachment_content=None, attachment_name=None):
     """
-    Sends an email using the Brevo API.
+    Sends an email using the Brevo API, with rate limiting.
     """
-    if not EMAIL_RE.match(FROM_EMAIL):
-        raise ValueError(
-            f"Invalid FROM email '{FROM_EMAIL}'. "
-            "Set PAYROLL_FROM to a full address like no-reply@yourdomain.com."
-        )
+    # Check monthly email limit
+    with transaction.atomic():
+        log = EmailSentLog.get_current_log()
+        if log.is_limit_reached():
+            raise Exception(f"Monthly email limit of {log.limit} reached.")
 
-    if not recipient_name:
-        recipient_name = recipient_email
+        if not EMAIL_RE.match(FROM_EMAIL):
+            raise ValueError(
+                f"Invalid FROM email '{FROM_EMAIL}'. "
+                "Set PAYROLL_FROM to a full address like no-reply@yourdomain.com."
+            )
 
-    try:
-        # Build the email
-        send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
-            to=[sib_api_v3_sdk.SendSmtpEmailTo(email=recipient_email, name=recipient_name)],
-            sender=sib_api_v3_sdk.SendSmtpEmailSender(email=FROM_EMAIL, name=FROM_NAME),
-            subject=subject,
-            html_content=html_content,
-            text_content=text_content,
-        )
+        if not recipient_name:
+            recipient_name = recipient_email
 
-        # Add attachment if provided
-        if attachment_content and attachment_name:
-            encoded_content = base64.b64encode(attachment_content).decode('utf-8')
-            send_smtp_email.attachment = [
-                sib_api_v3_sdk.SendSmtpEmailAttachment(content=encoded_content, name=attachment_name)
-            ]
+        try:
+            # Build the email
+            send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+                to=[sib_api_v3_sdk.SendSmtpEmailTo(email=recipient_email, name=recipient_name)],
+                sender=sib_api_v3_sdk.SendSmtpEmailSender(email=FROM_EMAIL, name=FROM_NAME),
+                subject=subject,
+                html_content=html_content,
+                text_content=text_content,
+            )
 
-        # Send the email
-        api_response = api_instance.send_transac_email(send_smtp_email)
-        return api_response
+            # Add attachment if provided
+            if attachment_content and attachment_name:
+                encoded_content = base64.b64encode(attachment_content).decode('utf-8')
+                send_smtp_email.attachment = [
+                    sib_api_v3_sdk.SendSmtpEmailAttachment(content=encoded_content, name=attachment_name)
+                ]
 
-    except ApiException as e:
-        # Re-raise the exception to be handled by the caller
-        raise e
+            # Send the email
+            api_response = api_instance.send_transac_email(send_smtp_email)
+            
+            # Increment count on success
+            log.increment_count()
+
+            return api_response
+
+        except ApiException as e:
+            # Re-raise the exception to be handled by the caller
+            raise e
 
 
 # --- Views -------------------------------------------------------------------
@@ -147,7 +160,7 @@ class SendSinglePayslipView(APIView):
                 },
                 status=status.HTTP_200_OK,
             )
-        except (ValueError, ApiException) as e:
+        except Exception as e:
             return Response(
                 {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST,

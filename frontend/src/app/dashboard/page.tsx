@@ -4,7 +4,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart, LineChart, PieChart as PieChartIcon } from "lucide-react"; 
-import { Users, Banknote, FileText, AlertTriangle } from "lucide-react";
+import { Users, Banknote, FileText } from "lucide-react";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Line, LineChart as RechartsLineChart, Pie, PieChart as RechartsPieChart, Cell } from "recharts";
 import Link from "next/link";
@@ -39,7 +39,7 @@ const chartConfig = {
 export default function DashboardPage() {
   return (
     <div className="space-y-8">
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-primary">Total Employees</CardTitle>
@@ -68,16 +68,6 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">148</div>
             <p className="text-xs text-muted-foreground">For May payroll period</p>
-          </CardContent>
-        </Card>
-        <Card className="glass-card border-destructive/50 bg-destructive/5">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-destructive">Pending Actions</CardTitle>
-            <AlertTriangle className="h-5 w-5 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">3</div>
-            <p className="text-xs text-destructive/80">Requires your attention</p>
           </CardContent>
         </Card>
       </section>
