@@ -20,7 +20,7 @@ idna==3.10
 inflection==0.5.1
 jsonschema==4.24.0
 jsonschema-specifications==2025.4.1
-mailersend==2.0.0
+sib-api-v3-sdk==7.6.0
 numpy==2.3.2
 openpyxl==3.1.5
 packaging==25.0
