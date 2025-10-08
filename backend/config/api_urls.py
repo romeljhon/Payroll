@@ -8,7 +8,7 @@ from payroll.views import BatchPayrollGenerationView, Generate13thMonthView, Gen
 from positions.views import PositionViewSet
 from timekeeping.views import TimeLogViewSet, HolidayViewSet
 from timekeeping.views import TimeLogImportView
-from email_sender.views import SendSinglePayslipView
+from email_sender.views import SendSinglePayslipView, SendBulkPayslipView
 
 router = DefaultRouter()
 router.register('businesses', BusinessViewSet)
@@ -29,6 +29,7 @@ router.register('payroll-runs', PayrollRunViewSet)
 urlpatterns = [
     # Non-ViewSet endpoints go here:
     path('email/send-single-payslip/', SendSinglePayslipView.as_view(), name='send-single-payslip'),
+    path('email/send-bulk-payslip/', SendBulkPayslipView.as_view(), name='send-bulk-payslip'),
     path('timelogs/import/', TimeLogImportView.as_view(), name='timelog-import'),
     path('generate/', GeneratePayrollView.as_view(), name='generate-payroll'),
     path('summary/', PayrollSummaryView.as_view(), name='payroll-summary'),

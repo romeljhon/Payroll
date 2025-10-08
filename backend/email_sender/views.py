@@ -165,3 +165,82 @@ class SendSinglePayslipView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+@extend_schema(tags=["Email"])
+class SendBulkPayslipView(APIView):
+    def post(self, request):
+        business_id = request.data.get("business_id")
+        branch_id = request.data.get("branch_id")
+        month_str = request.data.get("month")
+        cycle = request.data.get("payroll_cycle")
+        period = request.data.get("period")
+        business_name = request.data.get("business_name")
+
+        if not business_id and not branch_id:
+            return Response({"error": "Either business_id or branch_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not month_str:
+            return Response({"error": "month is required (YYYY-MM-DD)."}, status=status.HTTP_400_BAD_REQUEST)
+        if not cycle:
+            return Response({"error": "payroll_cycle is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            month = datetime.strptime(month_str, "%Y-%m-%d").date()
+        except Exception:
+            return Response(
+                {"error": "Invalid month format. Use YYYY-MM-DD (first day of month)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not period:
+            period = month.strftime("%B %Y")
+
+        employees = Employee.objects.all()
+        if branch_id:
+            employees = employees.filter(branch_id=branch_id)
+        elif business_id:
+            employees = employees.filter(branch__business_id=business_id)
+
+        results = []
+        for employee in employees:
+            if not employee.email:
+                results.append({"employee_id": employee.id, "success": False, "error": "No email address."})
+                continue
+
+            snapshot = get_employee_payslip_snapshot(employee.id, month, cycle)
+            if not snapshot["rows"]:
+                results.append({"employee_id": employee.id, "success": False, "error": "No payroll data."})
+                continue
+
+            pdf_bytes = generate_payslip_pdf(snapshot, business_name=business_name)
+            filename = f"Payslip-{employee.last_name}-{period.replace(' ', '-')}.pdf"
+            plain_text = (
+                f"Hi {employee.first_name},\n\n"
+                f"Attached is your payslip for {period} ({cycle}).\n\n"
+                "Regards,\nPayroll"
+            )
+            html_body = render_to_string(
+                "email_sender/payslip_email.html",
+                {
+                    "employee": employee,
+                    "period": period,
+                    "cycle": cycle,
+                    "snapshot": snapshot,
+                    "business_name": business_name,
+                },
+            )
+
+            try:
+                api_response = send_email(
+                    subject=f"Payslip - {period}",
+                    html_content=html_body,
+                    recipient_email=employee.email,
+                    recipient_name=f"{employee.first_name} {employee.last_name}",
+                    text_content=plain_text,
+                    attachment_content=pdf_bytes,
+                    attachment_name=filename,
+                )
+                results.append({"employee_id": employee.id, "success": True, "message_id": api_response.message_id})
+            except Exception as e:
+                results.append({"employee_id": employee.id, "success": False, "error": str(e)})
+        
+        return Response(results, status=status.HTTP_200_OK)
