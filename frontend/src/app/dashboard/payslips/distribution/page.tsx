@@ -106,6 +106,15 @@ export default function DistributePayslipsPage() {
     ? branches.filter((branch) => branch.business === selectedBusiness)
     : branches;
 
+  const getBusinessName = () => {
+    const business = businesses.find((b) => b.id === selectedBusiness);
+    return business ? business.name : undefined;
+  };
+
+  const formatMonth = (period: string) => {
+    return `${period}-01`;
+  };
+
   // --- SINGLE PAYSLIP ---
   const handleSendSinglePayslip = async () => {
     if (!selectedEmployee || !selectedPeriod || !selectedCycle) {
@@ -130,8 +139,9 @@ export default function DistributePayslipsPage() {
           },
           body: JSON.stringify({
             employee_id: Number(selectedEmployee),
-            month: selectedPeriod,
-            cycle_type: selectedCycle,
+            month: formatMonth(selectedPeriod),
+            payroll_cycle: selectedCycle,
+            business_name: getBusinessName(),
           }),
         }
       );
@@ -168,7 +178,7 @@ export default function DistributePayslipsPage() {
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/send-bulk-payslips/`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/email/send-bulk-payslip/`,
         {
           method: "POST",
           headers: {
@@ -176,12 +186,13 @@ export default function DistributePayslipsPage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            month: selectedPeriod,
-            cycle_type: selectedCycle,
+            month: formatMonth(selectedPeriod),
+            payroll_cycle: selectedCycle,
             business_id: selectedBusiness
               ? Number(selectedBusiness)
               : undefined,
             branch_id: selectedBranch ? Number(selectedBranch) : undefined,
+            business_name: getBusinessName(),
           }),
         }
       );
