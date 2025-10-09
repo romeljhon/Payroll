@@ -368,7 +368,7 @@ export async function getAllBranchesByBusiness(selectedBusiness: string) {
   if (!token) throw new Error("No token found");
 
   const res = await fetch(
-    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/branches/by-business/",
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/branches/by-business/${selectedBusiness}/`,
     {
       method: "GET",
       headers: {
@@ -378,14 +378,10 @@ export async function getAllBranchesByBusiness(selectedBusiness: string) {
     }
   );
 
-  const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data.detail || "Failed to fetch employees");
-  }
-
-  return data; // this is the employee list
+  if (!res.ok) throw new Error("Failed to fetch branches");
+  return res.json();
 }
+
 // ADD BRANCHES
 export async function AddBranches(body: any) {
   const token = localStorage.getItem("token");

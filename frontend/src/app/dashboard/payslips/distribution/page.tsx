@@ -66,17 +66,15 @@ export default function DistributePayslipsPage() {
 
   const { toast } = useToast();
 
-  // Fetch initial data
+  // Fetch initial data (except branches)
   useEffect(() => {
-    async function fetchData() {
+    async function fetchInitialData() {
       try {
-        const [employeeData, cycleData, businessData, branchData] =
-          await Promise.all([
-            getAllEmployee(),
-            getPayrollCycle(),
-            getBusiness(),
-            getAllBranchesByBusiness(),
-          ]);
+        const [employeeData, cycleData, businessData] = await Promise.all([
+          getAllEmployee(),
+          getPayrollCycle(),
+          getBusiness(),
+        ]);
 
         setEmployees(
           (employeeData || [])
@@ -89,7 +87,6 @@ export default function DistributePayslipsPage() {
 
         setCycles((cycleData || []).filter((c: any) => c && c.id));
         setBusinesses((businessData || []).filter((b: any) => b && b.id));
-        setBranches((branchData || []).filter((b: any) => b && b.id));
       } catch (err: any) {
         toast({
           variant: "destructive",
@@ -99,12 +96,31 @@ export default function DistributePayslipsPage() {
       }
     }
 
-    fetchData();
+    fetchInitialData();
   }, [toast]);
 
-  const filteredBranches = selectedBusiness
-    ? branches.filter((branch) => branch.business === selectedBusiness)
-    : branches;
+  // Fetch branches when a business is selected
+  useEffect(() => {
+    async function fetchBranches() {
+      if (!selectedBusiness) {
+        setBranches([]);
+        return;
+      }
+
+      try {
+        const branchData = await getAllBranchesByBusiness(selectedBusiness);
+        setBranches((branchData || []).filter((b: any) => b && b.id));
+      } catch (err: any) {
+        toast({
+          variant: "destructive",
+          title: "Fetch Error",
+          description: err.message || "Could not load branches.",
+        });
+      }
+    }
+
+    fetchBranches();
+  }, [selectedBusiness, toast]);
 
   const getBusinessName = () => {
     const business = businesses.find((b) => b.id === selectedBusiness);
@@ -237,19 +253,20 @@ export default function DistributePayslipsPage() {
               <Label htmlFor="business">Business (Optional)</Label>
               <Select
                 value={selectedBusiness}
-                onValueChange={setSelectedBusiness}
+                onValueChange={(value) => {
+                  setSelectedBusiness(value);
+                  setSelectedBranch(undefined);
+                }}
               >
                 <SelectTrigger id="business">
                   <SelectValue placeholder="Select business" />
                 </SelectTrigger>
                 <SelectContent>
-                  {businesses
-                    .filter((biz) => biz && biz.id)
-                    .map((biz) => (
-                      <SelectItem key={biz.id} value={String(biz.id)}>
-                        {biz.name || "Unnamed Business"}
-                      </SelectItem>
-                    ))}
+                  {businesses.map((biz) => (
+                    <SelectItem key={biz.id} value={String(biz.id)}>
+                      {biz.name || "Unnamed Business"}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -265,13 +282,11 @@ export default function DistributePayslipsPage() {
                   <SelectValue placeholder="Select branch" />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredBranches
-                    .filter((br) => br && br.id)
-                    .map((br) => (
-                      <SelectItem key={br.id} value={String(br.id)}>
-                        {br.name || "Unnamed Branch"}
-                      </SelectItem>
-                    ))}
+                  {branches.map((br) => (
+                    <SelectItem key={br.id} value={String(br.id)}>
+                      {br.name || "Unnamed Branch"}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -305,13 +320,11 @@ export default function DistributePayslipsPage() {
                   <SelectValue placeholder="Select employee" />
                 </SelectTrigger>
                 <SelectContent>
-                  {employees
-                    .filter((emp) => emp && emp.id)
-                    .map((emp) => (
-                      <SelectItem key={emp.id} value={String(emp.id)}>
-                        {emp.name || "Unnamed Employee"}
-                      </SelectItem>
-                    ))}
+                  {employees.map((emp) => (
+                    <SelectItem key={emp.id} value={String(emp.id)}>
+                      {emp.name || "Unnamed Employee"}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -342,13 +355,11 @@ export default function DistributePayslipsPage() {
                   <SelectValue placeholder="Select cycle" />
                 </SelectTrigger>
                 <SelectContent>
-                  {cycles
-                    .filter((c) => c && c.cycle_type)
-                    .map((c) => (
-                      <SelectItem key={c.id} value={c.cycle_type}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
+                  {cycles.map((c) => (
+                    <SelectItem key={c.id} value={c.cycle_type}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

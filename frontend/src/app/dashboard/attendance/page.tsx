@@ -48,7 +48,7 @@ interface AttendanceRecord {
   status: string;
 }
 
-// ---- Helpers ---- //
+// ---- Helper Mapper ---- //
 const mapApiToRecord = (it: any): AttendanceRecord => ({
   id: String(it.id ?? it.pk ?? crypto.randomUUID()),
   employeeId: Number(it.employee ?? it.employee_id ?? 0),
@@ -67,7 +67,7 @@ export default function AttendancePage() {
   const [businesses, setBusinesses] = useState<any[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
-  const [selectedBusinessId, setSelectedBusinessId] = useState<number | null>(
+  const [selectedBusinessId, setSelectedBusinessId] = useState<any | null>(
     null
   );
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
@@ -77,79 +77,87 @@ export default function AttendancePage() {
   const [statusValue, setStatusValue] = useState<string>("Present");
   const [submitting, setSubmitting] = useState(false);
 
-  // === Load businesses & branches on mount ===
+  // === Load businesses & branches ===
   useEffect(() => {
-    if (plan === 'Basic') return;
+    if (plan === "Basic") return;
     (async () => {
       try {
-        const bizList = await getAllBranchesByBusiness();
-        setBusinesses(Array.isArray(bizList) ? bizList : []);
+        const data = await getAllBranchesByBusiness(selectedBusinessId || 0);
+        if (!data || !Array.isArray(data)) throw new Error("Invalid API response");
+        setBusinesses(data);
       } catch (err: any) {
         toast({
           title: "Error",
-          description: err?.message || "Failed to load businesses & branches",
+          description: err?.message || "Failed to load businesses and branches.",
           variant: "destructive",
         });
       }
     })();
   }, [plan, toast]);
 
-  // === Load employees when branch changes ===
+  // === Load employees by branch ===
   useEffect(() => {
     if (!selectedBranch) return;
     (async () => {
       try {
-        const empList = await getAllEmployeeByBranch(selectedBranch);
-        setEmployees(Array.isArray(empList) ? empList : []);
+        const data = await getAllEmployeeByBranch(selectedBranch);
+        if (!data || !Array.isArray(data)) throw new Error("Invalid employee data.");
+        setEmployees(data);
       } catch (err: any) {
         toast({
           title: "Error",
-          description: err?.message || "Failed to load employees",
+          description: err?.message || "Failed to load employees.",
           variant: "destructive",
         });
       }
     })();
   }, [selectedBranch, toast]);
 
-  // === Load attendance when branch + business changes ===
+  // === Load attendance ===
   useEffect(() => {
     if (!selectedBranch || !selectedBusinessId) return;
     (async () => {
       try {
-        const timeList = await getTimekeepingByBusinessBranch(
+        const data = await getTimekeepingByBusinessBranch(
           selectedBusinessId,
           selectedBranch
         );
-        setAttendanceData(
-          Array.isArray(timeList) ? timeList.map(mapApiToRecord) : []
-        );
+        setAttendanceData(Array.isArray(data) ? data.map(mapApiToRecord) : []);
       } catch (err: any) {
         toast({
           title: "Error",
-          description: err?.message || "Failed to load attendance records",
+          description: err?.message || "Failed to load attendance records.",
           variant: "destructive",
         });
       }
     })();
   }, [selectedBranch, selectedBusinessId, toast]);
 
-  // Employee map for dropdown
+  // === Map employee names ===
   const employeesMap = useMemo(() => {
     const m = new Map<number, string>();
     for (const e of employees) {
-      const full =
+      const fullName =
         e.name ||
         [e.first_name, e.last_name].filter(Boolean).join(" ").trim() ||
-        String(e.email || "");
-      if (e.id != null) m.set(Number(e.id), full);
+        e.email ||
+        `Employee ${e.id}`;
+      if (e.id != null) m.set(Number(e.id), fullName);
     }
     return m;
   }, [employees]);
 
-  // === Submit Attendance ===
+  // === Handle Add Attendance ===
   const handleAddAttendance = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedEmployeeId || !selectedDate || !selectedBranch) return;
+    if (!selectedEmployeeId || !selectedDate || !selectedBranch) {
+      toast({
+        title: "Missing Fields",
+        description: "Please fill all required fields before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -165,11 +173,11 @@ export default function AttendancePage() {
       const created = await AddTimekeeping(body);
       setAttendanceData((prev) => [mapApiToRecord(created), ...prev]);
 
-      toast({ title: "Success", description: "Attendance added" });
+      toast({ title: "Success", description: "Attendance added successfully." });
     } catch (err: any) {
       toast({
-        title: "Failed",
-        description: err?.message,
+        title: "Failed to Add Attendance",
+        description: err?.message || "Please try again later.",
         variant: "destructive",
       });
     } finally {
@@ -177,32 +185,33 @@ export default function AttendancePage() {
     }
   };
 
-  if (plan === 'Basic') {
+  // === Locked for Basic Plan ===
+  if (plan === "Basic") {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)] text-center p-4">
         <Lock className="w-16 h-16 text-muted-foreground mb-4" />
         <h2 className="text-2xl font-semibold mb-2">Feature Locked</h2>
         <p className="text-muted-foreground mb-6 max-w-sm">
-          The <b>Attendance</b> feature is only available on the <b>Pro</b> and <b>Enterprise</b> plans. Please upgrade to access this feature.
+          The <b>Attendance</b> feature is only available on{" "}
+          <b>Pro</b> and <b>Enterprise</b> plans.
         </p>
-        <Button onClick={() => router.push('/pricing')}>
-          Upgrade Your Plan
-        </Button>
+        <Button onClick={() => router.push("/pricing")}>Upgrade Your Plan</Button>
       </div>
     );
   }
 
+  // === Render ===
   return (
     <div className="space-y-6">
-      {/* === TOP GRID: Attendance Form + Business/Branch Selection === */}
+      {/* Top grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* LEFT SIDE: Attendance Form */}
+        {/* Attendance Form */}
         {selectedBranch ? (
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle>Attendance for Branch #{selectedBranch}</CardTitle>
               <CardDescription>
-                Add a record for employees assigned to this branch.
+                Add an attendance record for this branch.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -216,6 +225,7 @@ export default function AttendancePage() {
                     className="border rounded-md w-full p-2"
                     value={selectedEmployeeId}
                     onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                    required
                   >
                     <option value="">Select Employee</option>
                     {employees.map((e) => (
@@ -250,12 +260,12 @@ export default function AttendancePage() {
 
                 <div>
                   <Label>Time In</Label>
-                  <Input type="time" name="timeIn" />
+                  <Input type="time" name="timeIn" required />
                 </div>
 
                 <div>
                   <Label>Time Out</Label>
-                  <Input type="time" name="timeOut" />
+                  <Input type="time" name="timeOut" required />
                 </div>
 
                 <div>
@@ -295,7 +305,7 @@ export default function AttendancePage() {
           </Card>
         )}
 
-        {/* RIGHT SIDE: Business → Branch Cards */}
+        {/* Business → Branch Selection */}
         <div className="grid grid-cols-1 gap-4">
           {businesses.map((biz) => (
             <Card key={biz.business.id} className="shadow-lg">
@@ -323,7 +333,7 @@ export default function AttendancePage() {
         </div>
       </div>
 
-      {/* === Attendance History Table === */}
+      {/* Attendance History */}
       <Card className="shadow-lg">
         <div className="p-4">
           <h3 className="text-lg font-semibold mb-2">Attendance History</h3>
@@ -341,10 +351,7 @@ export default function AttendancePage() {
               <tbody>
                 {attendanceData.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={5}
-                      className="px-3 py-4 text-center text-gray-500"
-                    >
+                    <td colSpan={5} className="px-3 py-4 text-center text-gray-500">
                       No attendance records found.
                     </td>
                   </tr>
@@ -356,8 +363,7 @@ export default function AttendancePage() {
                     >
                       <td className="px-3 py-2">{rec.date}</td>
                       <td className="px-3 py-2">
-                        {employeesMap.get(rec.employeeId) ??
-                          `#${rec.employeeId}`}
+                        {employeesMap.get(rec.employeeId) ?? `#${rec.employeeId}`}
                       </td>
                       <td className="px-3 py-2">{rec.timeIn}</td>
                       <td className="px-3 py-2">{rec.timeOut}</td>
