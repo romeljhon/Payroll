@@ -363,7 +363,7 @@ export async function getBranches() {
   return data; // this is the employee list
 }
 // GET ALLBRANCHES BY ALL BUSINESS 
-export async function getAllBranchesByBusiness() {
+export async function getAllBranchesByBusiness(selectedBusiness: string) {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("No token found");
 
@@ -1201,6 +1201,98 @@ export async function SinglePayslip(body: any) {
     throw new Error(data.detail || "Failed to create branch");
   }
   return data; // expected to be the created branch
+}
+export async function generatePayroll(body: any, selectedPeriod: string, selectedCycle: string, include13th: boolean) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/generate/",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Token ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body), // ✅ stringify the body here
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to create branch");
+  }
+  return data; // expected to be the created branch
+}
+export async function run13thMonth(body: any, selectedBusiness: string | undefined, selectedBranch: string | undefined) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/13th/",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Token ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body), // ✅ stringify the body here
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to create branch");
+  }
+  return data; // expected to be the created branch
+}
+export async function runBatchGeneration(body: any, selectedCycle: string, selectedBusiness: string | undefined, selectedBranch: string | undefined) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/batch/",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Token ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body), // ✅ stringify the body here
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to create branch");
+  }
+  return data; // expected to be the created branch
+}
+export async function previewPayslip(selectedEmployee: string, selectedPeriod: string, selectedCycle: string, include13th: boolean) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const res = await fetch(
+    process.env.NEXT_PUBLIC_API_BASE_URL + "/api/payslip/",
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Token ${token}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to fetch employees");
+  }
+
+  return data; // this is the employee list
 }
 
 // -----------------------------------------------------------------------------RECORDS OF PAYSLIP----------------------------------------------------

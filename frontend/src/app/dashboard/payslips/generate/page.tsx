@@ -21,7 +21,16 @@ import { Switch } from "@/components/ui/switch";
 import { FileSearch, Gift, Users, Lock, ChevronRight } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { getAllEmployee, getPayrollCycle, getBusiness, getAllBranchesByBusiness } from "@/lib/api";
+import {
+  getAllEmployee,
+  getPayrollCycle,
+  getBusiness,
+  getAllBranchesByBusiness,
+  generatePayroll,
+  previewPayslip,
+  run13thMonth,
+  runBatchGeneration,
+} from "@/lib/api";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useRouter } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
@@ -39,14 +48,14 @@ interface PayrollCycle {
 }
 
 interface Business {
-    id: string;
-    name: string;
+  id: string;
+  name: string;
 }
 
 interface Branch {
-    id: string;
-    name: string;
-    business: string;
+  id: string;
+  name: string;
+  business: string;
 }
 
 interface PayslipComponent {
@@ -76,7 +85,7 @@ export default function GeneratePayslipsPage() {
   const [selectedBranch, setSelectedBranch] = useState<string | undefined>();
 
   const [payslipPreview, setPayslipPreview] = useState<PayslipData | null>(null);
-  
+
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [cycles, setCycles] = useState<PayrollCycle[]>([]);
   const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -90,31 +99,169 @@ export default function GeneratePayslipsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // ... (fetch data logic remains the same)
+    // Fetch initial data
+    const fetchData = async () => {
+      try {
+        const [empRes, cycleRes, bizRes] = await Promise.all([
+          getAllEmployee(),
+          getPayrollCycle(),
+          getBusiness(),
+        ]);
+        setEmployees(empRes.data);
+        setCycles(cycleRes.data);
+        setBusinesses(bizRes.data);
+      } catch (error) {
+        console.error("Failed to fetch initial data:", error);
+        toast({
+          title: "Error",
+          description: "Could not load required data. Please try again.",
+          variant: "destructive",
+        });
+      }
+    };
+    if (plan !== 'Basic') {
+      fetchData();
+    }
   }, [plan, toast]);
+
+  useEffect(() => {
+    if (selectedBusiness) {
+      getAllBranchesByBusiness(selectedBusiness)
+        .then((res) => setBranches(res.data))
+        .catch((err) => {
+          console.error("Failed to fetch branches:", err);
+          toast({
+            title: "Error",
+            description: "Could not load branches for the selected business.",
+            variant: "destructive",
+          });
+        });
+    } else {
+      setBranches([]);
+    }
+  }, [selectedBusiness, toast]);
+
 
   const filteredBranches = selectedBusiness
     ? branches.filter((branch) => branch.business === selectedBusiness)
     : branches;
 
   const handleGeneratePayroll = async () => {
-    //  ... (logic is unchanged)
+    if (!selectedEmployee || !selectedPeriod || !selectedCycle) {
+      toast({
+        title: "Missing Information",
+        description: "Please select an employee, period, and cycle.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const response = await generatePayroll(selectedEmployee, selectedPeriod, selectedCycle, include13th);
+      setPayslipPreview(response.data);
+      setCanPreview(true);
+      toast({
+        title: "Payroll Generated",
+        description: "Payroll data has been successfully generated.",
+      });
+    } catch (error) {
+      console.error("Payroll generation failed:", error);
+      toast({
+        title: "Generation Failed",
+        description: "Could not generate payroll. Please check your selections.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handlePreviewPayslip = async () => {
-    // ... (logic is unchanged)
+    if (!selectedEmployee || !selectedPeriod || !selectedCycle) {
+      toast({
+        title: "Missing Information",
+        description: "Please select an employee, period, and cycle to preview.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const response = await previewPayslip(selectedEmployee, selectedPeriod, selectedCycle, include13th);
+      setPayslipPreview(response.data);
+       toast({
+        title: "Preview Loaded",
+        description: "Payslip preview has been successfully loaded.",
+      });
+    } catch (error) {
+      console.error("Payslip preview failed:", error);
+      toast({
+        title: "Preview Failed",
+        description: "Could not load payslip preview.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleRun13thMonth = async () => {
-    // ... (logic is unchanged)
+    if (!selectedPeriod) {
+       toast({
+        title: "Missing Period",
+        description: "Please select a period to run 13th month pay.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      await run13thMonth(selectedPeriod, selectedBusiness, selectedBranch);
+      toast({
+        title: "13th Month Processed",
+        description: `Successfully ran 13th month pay for ${selectedPeriod}.`,
+      });
+    } catch (error) {
+       console.error("13th month run failed:", error);
+       toast({
+        title: "Process Failed",
+        description: "Could not run 13th month pay.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleRunBatch = async () => {
-    // ... (logic is unchanged)
+     if (!selectedPeriod || !selectedCycle) {
+      toast({
+        title: "Missing Information",
+        description: "Please select a period and cycle for batch generation.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      await runBatchGeneration(selectedPeriod, selectedCycle, selectedBusiness, selectedBranch);
+      toast({
+        title: "Batch Generation Started",
+        description: "Payroll generation for the selected group has begun.",
+      });
+    } catch (error) {
+      console.error("Batch run failed:", error);
+       toast({
+        title: "Batch Failed",
+        description: "Could not start batch generation.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (plan === 'Basic') {
-      // ... (unchanged)
+    return (
+        <div className="flex flex-col items-center justify-center h-[80vh] text-center">
+            <Lock className="w-16 h-16 mb-4 text-muted-foreground" />
+            <h2 className="text-2xl font-semibold">Feature Locked</h2>
+            <p className="text-muted-foreground max-w-md mt-2">
+                Payroll generation is a premium feature. Please upgrade your plan to access it.
+            </p>
+            <Button onClick={() => router.push('/dashboard/subscription')} className="mt-6">
+                Upgrade Plan <ChevronRight className="w-4 h-4 ml-2" />
+            </Button>
+        </div>
+    );
   }
 
   return (
@@ -174,7 +321,7 @@ export default function GeneratePayslipsPage() {
                             <SelectContent>
                               {cycles.map((c) => (
                                 <SelectItem key={c.id} value={c.cycle_type}>{c.name}</SelectItem>
-                              ))}
+                              ))}\
                             </SelectContent>
                           </Select>
                         </div>
