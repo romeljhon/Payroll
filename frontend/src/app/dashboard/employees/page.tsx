@@ -17,9 +17,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Search, Filter, Eye } from "lucide-react";
+import { MoreHorizontal, Search, Filter, Eye, Upload } from "lucide-react";
 import Link from "next/link";
 import AddEmployeeDialog from "@/components/dashboard/employees/add-employee-dialog";
+import ImportEmployeeDialog from "@/components/dashboard/employees/import-employee-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { DeleteEmployee, getAllEmployee } from "@/lib/api";
 import Swal from "sweetalert2";
@@ -76,24 +77,26 @@ export default function EmployeesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isAddEmployeeDialogOpen, setIsAddEmployeeDialogOpen] = useState(false);
+  const [isImportEmployeeDialogOpen, setIsImportEmployeeDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const employees = await getAllEmployee();
-        setEmployees(employees);
-      } catch (err: any) {
-        setEmployees(stubEmployees);
-        toast({
-          variant: "destructive",
-          title: "Using Sample Data",
-          description:
-            "The server is unreachable. Showing sample employees instead.",
-        });
-      }
+  async function fetchEmployees() {
+    try {
+      const employees = await getAllEmployee();
+      setEmployees(employees);
+    } catch (err: any) {
+      setEmployees(stubEmployees);
+      toast({
+        variant: "destructive",
+        title: "Using Sample Data",
+        description:
+          "The server is unreachable. Showing sample employees instead.",
+      });
     }
-    fetchData();
+  }
+
+  useEffect(() => {
+    fetchEmployees();
   }, []);
 
   const filteredEmployees = employees.filter((emp) => {
@@ -112,6 +115,10 @@ export default function EmployeesPage() {
       title: "Employee Added",
       description: `${newEmployee.first_name} ${newEmployee.last_name} has been successfully added.`,
     });
+  };
+
+  const handleEmployeesImported = () => {
+    fetchEmployees();
   };
 
   const handleDelete = async (id: number) => {
@@ -179,8 +186,9 @@ export default function EmployeesPage() {
               <Button
                 variant="outline"
                 className="flex-grow sm:flex-grow-0 dark:border-gray-700 dark:text-gray-100"
+                onClick={() => setIsImportEmployeeDialogOpen(true)}
               >
-                <Filter className="mr-2 h-4 w-4" /> Filter
+                <Upload className="mr-2 h-4 w-4" /> Import
               </Button>
               <Button
                 className="bg-primary hover:bg-primary/90 flex-grow sm:flex-grow-0"
@@ -199,7 +207,6 @@ export default function EmployeesPage() {
                   key={employee.id}
                   className="relative shadow-md dark:bg-gray-800 dark:text-gray-100"
                 >
-                  {/* Three dots menu in top right */}
                   <div className="absolute top-2 right-2">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -239,7 +246,6 @@ export default function EmployeesPage() {
                   <CardHeader>
                     <CardTitle>
                       {employee.first_name} {employee.last_name}
-                      
                     </CardTitle>
                     <CardDescription>{employee.position}   <Badge
                       variant={employee.active ? "default" : "outline"}
@@ -261,7 +267,6 @@ export default function EmployeesPage() {
                     <p>
                       <strong>Hire Date:</strong> {employee.hire_date}
                     </p>
-                  
                   </CardContent>
                 </Card>
               ))}
@@ -278,6 +283,12 @@ export default function EmployeesPage() {
         isOpen={isAddEmployeeDialogOpen}
         onOpenChange={setIsAddEmployeeDialogOpen}
         onEmployeeAdded={handleEmployeeAdded}
+      />
+
+      <ImportEmployeeDialog
+        isOpen={isImportEmployeeDialogOpen}
+        onOpenChange={setIsImportEmployeeDialogOpen}
+        onEmployeesImported={handleEmployeesImported}
       />
     </div>
   );

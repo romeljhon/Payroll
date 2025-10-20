@@ -1,3 +1,4 @@
+
 from rest_framework import viewsets
 from .models import Employee
 from .serializers import EmployeeSerializer, EmployeeWithRateCreateSerializer, SalaryRateInlineSerializer
@@ -8,11 +9,33 @@ from rest_framework.response import Response
 from rest_framework import viewsets, status
 from payroll.models import SalaryRate
 from django.db import transaction
+from rest_framework.parsers import MultiPartParser
+from .importer import EmployeeImporter
+import io
 
 @extend_schema(tags=["Employees"])
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.select_related("branch", "position").all()
     serializer_class = EmployeeSerializer
+    parser_classes = [MultiPartParser]
+
+
+    @action(detail=False, methods=['post'], url_path='import')
+    def import_employees(self, request):
+        """
+        POST /employees/import/
+        """
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            file_contents = file.read().decode('utf-8')
+            importer = EmployeeImporter(io.StringIO(file_contents))
+            importer.import_employees()
+            return Response({'message': 'Employees imported successfully'}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     def get_queryset(self):
         queryset = super().get_queryset()

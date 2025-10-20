@@ -194,6 +194,35 @@ export async function AddEmployee(body: any) {
 
   return data; // this is the employee list
 }
+
+export async function importEmployees(file: File) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No token found");
+
+  const formData = new FormData();
+  formData.append("file", file); // 'file' should match the API's expected field name
+
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees/import/`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Token ${token}`,
+        // DON'T manually set 'Content-Type' when using FormData
+      },
+      body: formData,
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to import employees");
+  }
+
+  return data; // Expected to be employee list or summary
+}
+
 // UPDATE EMPLOYEE
 export async function UpdateEmployee(id: string, body: any) {
   const token = localStorage.getItem("token");
