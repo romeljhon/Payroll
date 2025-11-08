@@ -35,7 +35,7 @@ export default function RootLayout({
           <ReactQueryProvider>
             <SubscriptionProvider>
               <RolesAndPermissionsProvider>
-                <Loading />
+                {/* <Loading /> */}
                 {children}
                 <Toaster />
               </RolesAndPermissionsProvider>

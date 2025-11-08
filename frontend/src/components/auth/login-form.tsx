@@ -57,39 +57,39 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginFormSchema),
+    // resolver: zodResolver(loginFormSchema),
     defaultValues: { email: "", password: "" },
     mode: "onBlur",
   });
 
   async function onSubmit(values: LoginFormValues) {
-    setIsLoading(true);
-    try {
-      const data = await loginRequest(values.email, values.password);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("userEmail", values.email);
-      }
-      toast({
-        title: "Login Successful",
-        description: "Redirecting to your dashboard...",
-      });
+    // setIsLoading(true);
+    // try {
+    //   const data = await loginRequest(values.email, values.password);
+    //   if (typeof window !== "undefined") {
+    //     localStorage.setItem("token", data.token);
+    //     localStorage.setItem("userEmail", values.email);
+    //   }
+    //   toast({
+    //     title: "Login Successful",
+    //     description: "Redirecting to your dashboard...",
+    //   });
       router.push("/dashboard");
-    } catch (err: any) {
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description:
-          err.message ??
-          "Unable to sign you in. Please check your credentials and try again.",
-      });
-      form.setError("password", {
-        type: "manual",
-        message: "Invalid credentials",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // } catch (err: any) {
+    //   toast({
+    //     variant: "destructive",
+    //     title: "Login Failed",
+    //     description:
+    //       err.message ??
+    //       "Unable to sign you in. Please check your credentials and try again.",
+    //   });
+    //   form.setError("password", {
+    //     type: "manual",
+    //     message: "Invalid credentials",
+    //   });
+    // } finally {
+    //   setIsLoading(false);
+    // }
   }
 
   return (

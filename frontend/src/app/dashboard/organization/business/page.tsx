@@ -4,9 +4,7 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -116,7 +114,10 @@ export default function BusinessPage() {
     deleteMutation.mutate(id);
   };
 
-  const handleBusinessAdded = () => {
+  const handleBusinessAdded = (newBusiness: Business) => {
+    queryClient.setQueryData<Business[]>(['businesses'], (oldData) => 
+      oldData ? [...oldData, newBusiness] : [newBusiness]
+    );
     queryClient.invalidateQueries({ queryKey: ['businesses'] });
   };
 
@@ -128,84 +129,86 @@ export default function BusinessPage() {
 
   return (
     <div className="space-y-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-                <h1 className="text-2xl font-bold flex items-center"><Briefcase className="mr-2 h-6 w-6 text-primary" /> Businesses</h1>
-                <p className="text-muted-foreground">Manage your business entities.</p>
-            </div>
-            <Button
-                className="bg-primary hover:bg-primary/90 w-full md:w-auto"
-                onClick={() => setIsAddBusinessDialogOpen(true)}
-            >
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Business
-            </Button>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center"><Briefcase className="mr-2 h-6 w-6 text-primary" /> Businesses</h1>
+          <p className="text-muted-foreground">Manage your business entities.</p>
         </div>
+        <Button
+          className="bg-primary hover:bg-primary/90 w-full md:w-auto"
+          onClick={() => setIsAddBusinessDialogOpen(true)}
+        >
+          <PlusCircle className="mr-2 h-4 w-4" /> Add Business
+        </Button>
+      </div>
 
       {isLoading ? (
-         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(3)].map((_, i) => (
-                <Card key={i}>
-                    <CardHeader className="flex flex-row justify-between items-center">
-                        <Skeleton className="h-6 w-3/4" />
-                        <Skeleton className="h-8 w-8" />
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        <div className="flex items-center space-x-2">
-                            <Skeleton className="h-4 w-4 rounded-full" />
-                            <Skeleton className="h-4 w-1/2" />
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <Skeleton className="h-4 w-4 rounded-full" />
-                            <Skeleton className="h-4 w-full" />
-                        </div>
-                    </CardContent>
-                </Card>
-            ))}
-        </div>
-      ) : ( 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {businesses.map((business: Business) => (
-                <Card key={business.id} className="flex flex-col shadow-md hover:shadow-lg transition-shadow">
-                    <CardHeader className="flex flex-row justify-between items-start pb-4">
-                        <div className="font-semibold text-lg text-primary">{business.name}</div>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setEditingBusiness(business)}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    <span>Edit</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDelete(business.id)} className="text-red-500 focus:text-red-500">
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    <span>Delete</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </CardHeader>
-                    <CardContent className="flex-grow space-y-3 text-sm">
-                        <div className="flex items-center text-muted-foreground">
-                            <FileText className="h-4 w-4 mr-2 flex-shrink-0" />
-                            <span>{business.tax_id}</span>
-                        </div>
-                        <div className="flex items-center text-muted-foreground">
-                            <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
-                            <span>{business.address}</span>
-                        </div>
-                    </CardContent>
-                </Card>
-            ))}
+          {[...Array(3)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row justify-between items-center">
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-8 w-8" />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Skeleton className="h-4 w-4 rounded-full" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Skeleton className="h-4 w-4 rounded-full" />
+                  <Skeleton className="h-4 w-full" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {businesses.map((business: Business) => (
+            <Card key={business.id} className="flex flex-col shadow-md hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row justify-between items-start pb-4">
+                <div className="font-semibold text-lg text-primary">{business.name}</div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setEditingBusiness(business)}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      <span>Edit</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDelete(business.id)} className="text-red-500 focus:text-red-500">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      <span>Delete</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </CardHeader>
+              <CardContent className="flex-grow space-y-3 text-sm">
+                <div className="flex items-center text-muted-foreground">
+                  <FileText className="h-4 w-4 mr-2 flex-shrink-0" />
+                  <span>{business.tax_id}</span>
+                </div>
+                <div className="flex items-center text-muted-foreground">
+                  <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
+                  <span>{business.address}</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
 
-      <AddBusinessDialog
-        isOpen={isAddBusinessDialogOpen}
-        onOpenChange={setIsAddBusinessDialogOpen}
-        onBusinessAdded={handleBusinessAdded}
-      />
+      {isAddBusinessDialogOpen && (
+        <AddBusinessDialog
+          isOpen={isAddBusinessDialogOpen}
+          onOpenChange={setIsAddBusinessDialogOpen}
+          onBusinessAdded={handleBusinessAdded}
+        />
+      )}
 
       {editingBusiness && (
         <EditBusinessDialog
